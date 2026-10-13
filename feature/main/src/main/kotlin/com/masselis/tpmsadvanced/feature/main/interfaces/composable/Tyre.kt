@@ -175,7 +175,7 @@ private fun AlertButton(
     }
     if (showDialog)
         AlertDialog(
-            text = { Text("TPMS Advanced is unable to find your sensor, try to disable bluetooth or restart the app") },
+            text = { Text("TyrePing is unable to find your sensor. Try disabling Bluetooth or restarting the app.") },
             confirmButton = {
                 Row {
                     TextButton(onClick = { disableBluetooth(); showDialog = false }) {

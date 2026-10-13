@@ -49,7 +49,7 @@ internal fun InternalPreconditions(
         permissionState.allPermissionsGranted.not() -> Scaffold { padding ->
             @Suppress("MaxLineLength")
             MissingPermission(
-                text = "TPMS Advanced needs some permission to continue.\nTheses are required by the system in order to make BLE scan",
+                text = "TyrePing needs some permissions to continue.\nThese are required by the system in order to perform BLE scans",
                 refusedText = "Failed to obtain permission, please update this in the app's system settings",
                 permissionState = permissionState,
                 modifier = modifier
@@ -84,7 +84,7 @@ private fun ChipIsOff(
     ) {
         Text(
             @Suppress("MaxLineLength")
-            "TPMS Advanced needs you to enable the bluetooth chip.\nThis is required by the system in order to make BLE scan",
+            "TyrePing needs you to enable Bluetooth.\nThis is required by the system in order to perform BLE scans",
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth(0.7f)

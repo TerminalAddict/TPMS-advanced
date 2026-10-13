@@ -158,7 +158,7 @@ internal class ServiceNotifier(
                             } !!!"
 
                             ScanFailure -> "The Android system reported an issue during the" +
-                                    " bluetooth scan, TPMS Advanced must be restarted"
+                                    " bluetooth scan, TyrePing must be restarted"
                         }
                     )
                     .apply {

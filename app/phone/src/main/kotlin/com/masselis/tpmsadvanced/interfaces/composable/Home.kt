@@ -340,7 +340,7 @@ private fun WicarlinkSupportAlert(
                 Spacer(Modifier.width(8.dp))
                 Text(
                     "Sensors manufactured by \"Wicarlink\" shown within their app \"LYTPMS\" are now " +
-                            "supported by TPMS Advanced",
+                            "supported by TyrePing",
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -378,7 +378,7 @@ private fun AndroidAutoSupportAlert(
 
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "Android auto is now fully supported! Connect this device to your car radio and open TPMS Advanced",
+		     "Android Auto is now fully supported! Connect this device to your car radio and open TyrePing",
                     modifier = Modifier.fillMaxWidth()
                 )
             }

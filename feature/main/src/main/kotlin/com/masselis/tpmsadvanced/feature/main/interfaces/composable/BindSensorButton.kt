@@ -88,7 +88,7 @@ private fun BindSensorDialog(
             Text(
                 when (bondRequest) {
                     is State.RequestBond.NewBinding ->
-                        "When a sensor is set as favorite, TPMS Advanced will only display this sensor for this tyre"
+                        "When a sensor is set as favorite, TyrePing will only display this sensor for this tyre"
 
                     is State.RequestBond.AlreadyBound ->
                         @Suppress("MaxLineLength")
