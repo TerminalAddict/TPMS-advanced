@@ -53,7 +53,7 @@ rootProject.file("secrets/publisher-service-account.json").takeIf { it.exists() 
 
 android {
     defaultConfig {
-        applicationId = "com.masselis.tpmsadvanced"
+        applicationId = "nz.paulwillard.tyreping"
         namespace = "com.masselis.tpmsadvanced"
     }
     keys(keysFile.asFile)?.also { keys ->
