@@ -350,7 +350,7 @@ try {
     $remoteTagExists = -not [string]::IsNullOrWhiteSpace($remoteTagText)
 
     $oldText = [System.IO.File]::ReadAllText($versionFile)
-    $versionPattern = '(?m)^(?<prefix>[ \t]*app[ \t]*=[ \t]*")(?<old>\d+\.\d+\.\d+)(?<suffix>"[ \t]*)$'
+    $versionPattern = '(?m)^(?<prefix>[ \t]*app[ \t]*=[ \t]*")(?<old>\d+\.\d+\.\d+)(?<suffix>"[ \t]*\r?)$'
     $versionMatches = [regex]::Matches($oldText, $versionPattern)
     if ($versionMatches.Count -ne 1) {
         throw "Could not find exactly one 'app = `"x.y.z`"' entry in libs.versions.toml."
