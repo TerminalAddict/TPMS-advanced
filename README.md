@@ -1,52 +1,193 @@
-[![Develop](https://github.com/VincentMasselis/TPMS-advanced/actions/workflows/develop.yml/badge.svg)](https://github.com/VincentMasselis/TPMS-advanced/actions/workflows/develop.yml)
-[![Play Store Version](https://img.shields.io/endpoint?url=https://play.rajkumaar.co.in/version?id=com.masselis.tpmsadvanced&logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=com.masselis.tpmsadvanced)
-[![Play Store Installs](https://img.shields.io/endpoint?url=https://play.rajkumaar.co.in/downloads?id=com.masselis.tpmsadvanced&logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=com.masselis.tpmsadvanced)
+<p align="center">
+  <img src="app/phone/src/main/res/mipmap-xxxhdpi/ic_launcher.png" width="160" alt="TyrePing launcher icon">
+</p>
 
-![Android Auto](https://img.shields.io/badge/Android%20Auto-supported-3DDC84?logo=androidauto&logoColor=white)
-[![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-4285F4?logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
+<h1 align="center">TyrePing</h1>
 
-[![License](https://img.shields.io/github/license/VincentMasselis/TPMS-advanced)](LICENSE)
+<p align="center">
+  <strong>Bluetooth Low Energy (BLE) TPMS Monitor for Android</strong>
+</p>
 
-# TPMS-advanced
+<p align="center">
+  <img alt="Android" src="https://img.shields.io/badge/Android-BLE%20TPMS-3DDC84?logo=android&logoColor=white">
+  <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-Jetpack%20Compose-7F52FF?logo=kotlin&logoColor=white">
+  <img alt="Android Auto" src="https://img.shields.io/badge/Android%20Auto-supported-3DDC84?logo=androidauto&logoColor=white">
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/TerminalAddict/TyrePing"></a>
+</p>
 
-Android app for Bluetooth Low Energy TPMS sensors made by the manufacturers Sysgration, Pecham and Bekubee.
+TyrePing is an Android monitor for Bluetooth Low Energy tyre-pressure monitoring system sensors.
 
-<img src="https://user-images.githubusercontent.com/6769250/192485450-354d941b-47e7-4078-bede-5c28ace85b30.png" width="200"> <img src="https://user-images.githubusercontent.com/6769250/192485472-8c2c60fd-da54-4703-99db-3113e1339676.png" width="200"> <img src="https://user-images.githubusercontent.com/6769250/192485477-24ef7b35-8b37-4c40-b98e-e7025980d3f6.png" width="200"> <img src="https://user-images.githubusercontent.com/6769250/192485485-493ee137-6d88-43fc-b6fa-e50a31c96696.png" width="200">
+It is an independent fork of [TPMS Advanced](https://github.com/VincentMasselis/TPMS-advanced), maintained by [TerminalAddict](https://github.com/TerminalAddict). TyrePing retains the upstream project’s Android architecture and sensor support while providing its own application identity, release path, branding, and feature direction.
 
-Available on
-the [Play Store](https://play.google.com/store/apps/details?id=com.masselis.tpmsadvanced)
+## Project status
+
+TyrePing is under active development.
+
+- **Application ID:** `nz.paulwillard.tyreping`
+- **Repository:** `TerminalAddict/TyrePing`
+- **Development branch:** `tyreping`
+- **Distribution:** currently built and installed manually
+- **Google Play:** not currently published
+
+Because TyrePing has its own Android application ID, it can be installed alongside the original TPMS Advanced app. A Play Store update to TPMS Advanced will not overwrite TyrePing.
 
 ## Features
 
-* Pressures alerts
-* Temperature alerts
-* Support one or multiple cars
-* QR Code scanning
-* Dark mode
-* Pressure and temperature units selection
-* Show the latest recorded value even after a restart
-* Filter with favourites sensors
-* Supports cars, motorcycles, trailers and 3 wheelers
-* Run in background
-* Shortcut to access directly to the vehicle
+TyrePing currently inherits the core capabilities of TPMS Advanced, including:
 
-## What's next ?
+- BLE scanning for supported TPMS sensors
+- Live tyre pressure and temperature readings
+- Low/high-pressure alerts
+- Temperature alerts
+- Multiple vehicle support
+- Cars, motorcycles, trailers, and three-wheelers
+- Pressure and temperature unit selection
+- QR-code sensor binding
+- Favourite sensor binding
+- Latest recorded readings retained across app restarts
+- Background monitoring
+- Dark mode
+- Android Auto support
+- Direct vehicle shortcuts
 
-* Battery alerts
-* Last time update
-* Temperature history
-* Automatic startup in background when connected to the car's radio in bluetooth
-* Add support for other BLE Sensors
+Supported sensor families include formats used by Sysgration, Pecham, Bekubee/HRTPMS, Wicarlink/LYTPMS, and related compatible BLE sensors. Exact compatibility depends on the sensor’s BLE advertisement format.
 
-## Which sensors are compatibles ?
+## TyrePing identity
 
-You can buy them on Ali*xpress, it looks like this:
+TyrePing is installed as a separate Android application:
 
-<img width="95" alt="Capture d’écran 2024-01-16 à 16 18 59" src="https://user-images.githubusercontent.com/6769250/192489323-00d1f481-635e-459b-9a43-f2ff75299fa5.png"> or <img width="95" alt="Capture d’écran 2024-01-16 à 16 18 59" src="https://github.com/VincentMasselis/TPMS-advanced/assets/6769250/7534982b-5a44-435a-a489-0877d61adc97"> or <img width="94" alt="Capture d’écran 2026-09-04 à 17 09 05" src="https://github.com/user-attachments/assets/d00ce071-7987-454a-9a66-caaa6551a679" />
+```text
+nz.paulwillard.tyreping
+```
 
+The project has its own:
 
+- App name and package identity
+- Blue TPMS/Bluetooth launcher icon
+- Adaptive Android launcher assets
+- Android 13+ monochrome themed icon
+- User-facing branding
+- GitHub release path
 
+The internal Kotlin package names remain based on the upstream project for now. They do not affect TyrePing’s ability to install as an independent app.
 
-## Contributing
+## Building
 
-Take a look at the [contributing file](CONTRIBUTING.md).
+### Requirements
+
+- Git
+- Android Studio
+- Android SDK and platform tools
+- Java supplied by Android Studio, or another compatible JDK
+
+On Windows, the usual Java location is:
+
+```text
+C:\Program Files\Android\Android Studio\jbr
+```
+
+### Clone
+
+```bash
+git clone --branch tyreping https://github.com/TerminalAddict/TyrePing.git
+cd TyrePing
+```
+
+### Build a debug APK
+
+Windows:
+
+```cmd
+gradlew.bat :app:phone:assembleDebug
+```
+
+Linux/macOS:
+
+```bash
+./gradlew :app:phone:assembleDebug
+```
+
+The debug APK is created at:
+
+```text
+app/phone/build/outputs/apk/debug/phone-debug.apk
+```
+
+### Install with ADB
+
+```cmd
+adb install -r app\phone\build\outputs\apk\debug\phone-debug.apk
+```
+
+## Upstream synchronisation
+
+The recommended remotes are:
+
+```text
+origin    https://github.com/TerminalAddict/TyrePing.git
+upstream  https://github.com/VincentMasselis/TPMS-advanced.git
+```
+
+To update the local upstream-tracking `develop` branch:
+
+```cmd
+git fetch upstream
+git switch develop
+git pull --ff-only upstream develop
+git push origin develop
+```
+
+Then merge reviewed upstream changes into TyrePing:
+
+```cmd
+git switch tyreping
+git merge develop
+```
+
+Resolve and test any conflicts before pushing:
+
+```cmd
+gradlew.bat :app:phone:assembleDebug
+git push
+```
+
+Upstream changes are selected deliberately. TyrePing does not have to adopt every behavioural or release change made by TPMS Advanced.
+
+## Development direction
+
+Planned or under evaluation:
+
+- Signed TyrePing release APKs
+- GitHub Releases
+- Sensor ID display
+- Live “time since last update” display
+- Manual sensor-ID entry
+- Improved single-sensor QR binding
+- Separate front and rear pressure ranges
+- Additional BLE sensor formats
+- Additional motorcycle-focused monitoring features
+- Optional display and notification settings
+
+Features may be adapted from other open-source projects only after checking licence compatibility and attribution requirements.
+
+## Safety
+
+TyrePing is an advisory monitoring tool, not a replacement for regular tyre inspection or a calibrated pressure gauge.
+
+Do not rely solely on the app for vehicle safety decisions. Check tyre pressures manually and follow the vehicle and tyre manufacturers’ recommendations.
+
+## Upstream project
+
+TyrePing is based on:
+
+- [VincentMasselis/TPMS-advanced](https://github.com/VincentMasselis/TPMS-advanced)
+
+Generic fixes and improvements that are useful to the upstream project may still be contributed back where appropriate.
+
+## Licence
+
+TyrePing retains the upstream project’s Apache License 2.0 licensing.
+
+See [LICENSE](LICENSE) for the full licence text.
+
+The TyrePing name, package identity, branding, and launcher artwork are specific to this fork. References to the upstream project do not imply endorsement by its original author.
