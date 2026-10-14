@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,6 +21,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -50,20 +52,25 @@ public fun MissingPermission(
                 .fillMaxWidth(0.7f)
                 .padding(bottom = 8.dp)
         )
-        FilledTonalButton(onClick = {
-            if (hasRefusedGrant)
-                Intent(ACTION_APPLICATION_DETAILS_SETTINGS)
-                    .apply { addCategory(CATEGORY_DEFAULT) }
-                    .apply { data = "package:${activity!!.packageName}".toUri() }
-                    .apply { addFlags(FLAG_ACTIVITY_NEW_TASK) }
-                    .apply { addFlags(FLAG_ACTIVITY_NO_HISTORY) }
-                    .apply { addFlags(FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS) }
-                    .also { activity!!.startActivity(it) }
-            else {
-                permissionState.launchMultiplePermissionRequest()
-                hasRefusedGrant = true
-            }
-        }) {
+        FilledTonalButton(
+            colors = ButtonDefaults.filledTonalButtonColors(
+                containerColor = Color(0xFF168BFF),
+                contentColor = Color.White,
+            ),
+            onClick = {
+                if (hasRefusedGrant)
+                    Intent(ACTION_APPLICATION_DETAILS_SETTINGS)
+                        .apply { addCategory(CATEGORY_DEFAULT) }
+                        .apply { data = "package:${activity!!.packageName}".toUri() }
+                        .apply { addFlags(FLAG_ACTIVITY_NEW_TASK) }
+                        .apply { addFlags(FLAG_ACTIVITY_NO_HISTORY) }
+                        .apply { addFlags(FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS) }
+                        .also { activity!!.startActivity(it) }
+                else {
+                    permissionState.launchMultiplePermissionRequest()
+                    hasRefusedGrant = true
+                }
+            }) {
             Text(
                 if (hasRefusedGrant) "Open settings"
                 else "Grant permission"

@@ -8,10 +8,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.AnnotatedString
@@ -31,6 +33,8 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Temperature.CREATOR.fahrenhe
 import com.masselis.tpmsadvanced.feature.main.R
 import kotlin.math.roundToInt
 
+private val TyrePingBlue = Color(0xFF168BFF)
+
 @Composable
 internal fun PressureRangeSlider(
     minMaxRange: ClosedFloatingPointRange<Pressure>,
@@ -45,7 +49,7 @@ internal fun PressureRangeSlider(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = AnnotatedString(
-                    when(axle)  {
+                    when (axle) {
                         Location.Axle.FRONT -> "Front pressure range: "
                         Location.Axle.REAR -> "Rear pressure range: "
                         null -> "Pressure range: "
@@ -81,23 +85,32 @@ internal fun PressureRangeSlider(
             value = values.start.convert(unit)..values.endInclusive.convert(unit),
             valueRange = minMaxRange.start.convert(unit)..minMaxRange.endInclusive.convert(unit),
             onValueChange = { range ->
-                    onValue(
-                        range.start.roundTo(unit.increment).asPressure(unit).coerceIn(minMaxRange)..
-                            range.endInclusive.roundTo(unit.increment).asPressure(unit).coerceIn(minMaxRange)
-                    )
-                }
+                onValue(
+                    range.start.roundTo(unit.increment).asPressure(unit).coerceIn(minMaxRange)..
+                            range.endInclusive.roundTo(unit.increment).asPressure(unit)
+                                .coerceIn(minMaxRange)
+                )
+            },
+            colors = SliderDefaults.colors(
+                thumbColor = TyrePingBlue,
+                activeTrackColor = TyrePingBlue,
+                inactiveTrackColor = TyrePingBlue.copy(alpha = 0.25f),
+            ),
         )
     }
 }
 
 private fun Float.roundTo(increment: Float): Float = div(increment).roundToInt().times(increment)
+
 @Suppress("MagicNumber")
-private val PressureUnit.increment get() = when(this) {
-    PressureUnit.KILO_PASCAL -> 5f
-    PressureUnit.BAR -> 0.05f
-    PressureUnit.PSI -> 1f
-}
-private fun Float.asPressure(unit: PressureUnit) = when(unit)   {
+private val PressureUnit.increment
+    get() = when (this) {
+        PressureUnit.KILO_PASCAL -> 5f
+        PressureUnit.BAR -> 0.05f
+        PressureUnit.PSI -> 1f
+    }
+
+private fun Float.asPressure(unit: PressureUnit) = when (unit) {
     PressureUnit.KILO_PASCAL -> this.kpa
     PressureUnit.BAR -> this.bar
     PressureUnit.PSI -> this.psi
@@ -168,7 +181,12 @@ internal fun TemperatureSlider(
                         TemperatureUnit.FAHRENHEIT -> it.fahrenheit
                     }
                 )
-            }
+            },
+            colors = SliderDefaults.colors(
+                thumbColor = TyrePingBlue,
+                activeTrackColor = TyrePingBlue,
+                inactiveTrackColor = TyrePingBlue.copy(alpha = 0.25f),
+            ),
         )
     }
 }
