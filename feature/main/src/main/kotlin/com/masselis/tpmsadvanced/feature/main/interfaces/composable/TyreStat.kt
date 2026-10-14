@@ -8,6 +8,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -16,6 +17,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
+import com.masselis.tpmsadvanced.core.common.now
 import com.masselis.tpmsadvanced.core.ui.viewModel
 import com.masselis.tpmsadvanced.data.unit.model.PressureUnit
 import com.masselis.tpmsadvanced.data.unit.model.TemperatureUnit
@@ -32,10 +34,12 @@ import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
 import com.masselis.tpmsadvanced.feature.main.usecase.TyreStatsStateFlow.State
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.milliseconds
 import java.text.SimpleDateFormat
-import java.util.Locale
 import java.util.Date
+import java.util.Locale
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 @Composable
 internal fun TyreStat(
@@ -155,10 +159,90 @@ private fun TyreStat(
                 color = color,
                 modifier = Modifier.align(alignment),
             )
+            if (timestamp > 0.0) {
+                Text(
+                    text = "Last seen ${elapsedSinceUpdate(timestamp)} ago",
+                    fontSize = 9.sp,
+                    maxLines = 1,
+                    color = color,
+                    modifier = Modifier.align(alignment),
+                )
+            }
         }
     }
 }
 
+/**
+ * Updates the elapsed-time label independently of BLE sensor readings.
+ * A new sensor timestamp restarts the timer.
+ */
+@Composable
+private fun elapsedSinceUpdate(timestamp: Double): String {
+    val label by produceState(
+        initialValue = elapsedLabel(timestamp, now()),
+        key1 = timestamp,
+    ) {
+        while (true) {
+            val currentTime = now()
+
+            value = elapsedLabel(timestamp, currentTime)
+
+            delay(nextElapsedTick(timestamp, currentTime))
+        }
+    }
+
+    return label
+}
+
+internal fun elapsedLabel(
+    timestamp: Double,
+    currentTime: Double,
+): String {
+    val minutes = totalMinutesSince(timestamp, currentTime)
+    val hours = minutes / 60
+
+    return when {
+        minutes == 0L -> "<1 min"
+        minutes < 120L -> "$minutes min"
+        hours < 48L -> "$hours hours"
+        else -> "${hours / 24} days"
+    }
+}
+
+private fun totalMinutesSince(
+    timestamp: Double,
+    currentTime: Double,
+): Long =
+    ((currentTime - timestamp) / 60.0)
+        .toLong()
+        .coerceAtLeast(0L)
+
+/**
+ * Wake up at the next relevant boundary:
+ * every minute, then every hour, then every day.
+ */
+internal fun nextElapsedTick(
+    timestamp: Double,
+    currentTime: Double,
+): Duration {
+    val minutes = totalMinutesSince(timestamp, currentTime)
+    val hours = minutes / 60
+
+    val nextBoundarySeconds = when {
+        minutes < 120L ->
+            (minutes + 1) * 60L
+
+        hours < 48L ->
+            (hours + 1) * 3600L
+
+        else ->
+            (hours / 24 + 1) * 86400L
+    }
+
+    return (timestamp + nextBoundarySeconds - currentTime)
+        .seconds
+        .coerceAtLeast(1.seconds)
+}
 
 @Preview
 @Composable
