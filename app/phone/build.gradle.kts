@@ -64,6 +64,10 @@ android {
             storePassword = keys.appKeyStorePwd
         }
     }
+    buildTypes.getByName("debug") {
+        applicationIdSuffix = ".debug"
+        versionNameSuffix = "-debug"
+    }
     buildTypes.getByName("release") {
         signingConfig = signingConfigs.findByName("release") ?: signingConfigs["debug"]
         isMinifyEnabled = true
