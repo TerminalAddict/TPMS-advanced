@@ -2,7 +2,14 @@ package com.masselis.tpmsadvanced.data.vehicle.interfaces.impl
 
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.impl.utils.mockScanRecord
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.impl.utils.mockScanResult
+import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.kpa
+import com.masselis.tpmsadvanced.data.vehicle.model.Temperature.CREATOR.celsius
+import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import org.junit.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 
 internal class BekubeeTpmsTest {
 
@@ -56,4 +63,61 @@ internal class BekubeeTpmsTest {
             .onEach(::println)
             .also { assert(it.size == samples.size) }
     }
+
+    @Test
+    fun `decodes original A827 sensor correctly`() {
+        val manufacturerData = "AF440089002D56087B".hexToByteArray()
+
+        val decoder = RawBekubeeTpms(
+            mockScanResult(
+                mockScanRecord = mockScanRecord(
+                    mockDeviceName = "TPMS",
+                    containsServiceUuids = true,
+                    mockManufacturerId = 0x0002,
+                    mockManufacturerData = manufacturerData
+                )
+            )
+        )
+
+
+
+        assertNotNull(decoder)
+
+        val tyre = assertIs<Tyre.Unlocated>(decoder.asTyre())
+
+        assertEquals(0x562D00, tyre.sensorId)
+        assertEquals(37f.kpa, tyre.pressure)
+        assertEquals(18f.celsius, tyre.temperature)
+        assertEquals(30.toUShort(), tyre.battery)
+        assertFalse(tyre.isAlarm)
+    }
+
+
+    @Test
+    fun `decodes unplugged A827 sensor correctly`() {
+        val manufacturerData = "B34A0064002FA0057D".hexToByteArray()
+
+        val decoder = RawBekubeeTpms(
+            mockScanResult(
+                mockScanRecord = mockScanRecord(
+                    mockDeviceName = "TPMS",
+                    containsServiceUuids = true,
+                    mockManufacturerId = 0x0006,
+                    mockManufacturerData = manufacturerData
+                )
+            )
+        )
+
+        assertNotNull(decoder)
+
+        val tyre = assertIs<Tyre.Unlocated>(decoder.asTyre())
+
+        assertEquals(0xA02F00, tyre.sensorId)
+        assertEquals(0f.kpa, tyre.pressure)
+        assertEquals(24f.celsius, tyre.temperature)
+        assertEquals(30.toUShort(), tyre.battery)
+        assertFalse(tyre.isAlarm)
+    }
+
+
 }
