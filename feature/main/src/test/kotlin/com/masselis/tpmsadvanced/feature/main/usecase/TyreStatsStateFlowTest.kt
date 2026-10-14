@@ -5,6 +5,7 @@ import com.masselis.tpmsadvanced.core.test.MainDispatcherRule
 import com.masselis.tpmsadvanced.data.unit.interfaces.UnitPreferences
 import com.masselis.tpmsadvanced.data.unit.model.PressureUnit
 import com.masselis.tpmsadvanced.data.unit.model.TemperatureUnit
+import com.masselis.tpmsadvanced.data.vehicle.model.Location.Wheel.FRONT_LEFT
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.bar
 import com.masselis.tpmsadvanced.data.vehicle.model.Temperature.CREATOR.celsius
 import com.masselis.tpmsadvanced.data.vehicle.model.TyreAtmosphere
@@ -43,8 +44,9 @@ internal class TyreStatsStateFlowTest {
 
         val rangeUseCase = mockk<VehicleRangesUseCase> {
             every { highTemp } returns MutableStateFlow(90f.celsius)
-            every { lowPressure } returns MutableStateFlow(1f.bar)
-            every { highPressure } returns MutableStateFlow(3f.bar)
+            every {
+                resolvePressures(FRONT_LEFT)
+            } returns MutableStateFlow(1f.bar to 3f.bar)
         }
 
         val unitPreferences = mockk<UnitPreferences> {
@@ -55,6 +57,7 @@ internal class TyreStatsStateFlowTest {
         return TyreStatsStateFlow(
             atmosphereUseCase = atmosphereUseCase,
             rangeUseCase = rangeUseCase,
+            location = FRONT_LEFT,
             unitPreferences = unitPreferences,
             scope = scope.backgroundScope,
         )
