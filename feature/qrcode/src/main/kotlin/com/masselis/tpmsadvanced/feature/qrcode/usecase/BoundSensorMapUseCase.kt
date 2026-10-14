@@ -1,6 +1,7 @@
 package com.masselis.tpmsadvanced.feature.qrcode.usecase
 
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorDatabase
+import com.masselis.tpmsadvanced.data.vehicle.model.Location
 import com.masselis.tpmsadvanced.data.vehicle.model.Location.Wheel.FRONT_LEFT
 import com.masselis.tpmsadvanced.data.vehicle.model.Location.Wheel.FRONT_RIGHT
 import com.masselis.tpmsadvanced.data.vehicle.model.Location.Wheel.REAR_LEFT
@@ -19,19 +20,26 @@ import kotlinx.coroutines.coroutineScope
 
 internal interface BoundSensorMapUseCase {
     suspend fun bind(qrCodeSensors: QrCodeSensors)
+    suspend fun bind(sensorId: Int, location: Location)
 
     class Impl(
         private val sensorDatabase: SensorDatabase,
         private val currentVehicleUseCase: CurrentVehicleUseCase,
     ) : BoundSensorMapUseCase {
+        override suspend fun bind(sensorId: Int, location: Location) {
+            val currentUuid = currentVehicleUseCase.value.vehicle.uuid
+
+            sensorDatabase.upsert(
+                Sensor(sensorId, location), currentUuid
+            )
+        }
+
         override suspend fun bind(qrCodeSensors: QrCodeSensors) = coroutineScope {
             val currentUuid = currentVehicleUseCase.value.vehicle.uuid
             val kind = currentVehicleUseCase.value.vehicle.kind
-            qrCodeSensors
-                .map {
+            qrCodeSensors.map {
                     Sensor(
-                        it.id,
-                        when (kind) {
+                        it.id, when (kind) {
                             CAR -> it.wheel
 
                             SINGLE_AXLE_TRAILER -> it.wheel.toSide()
@@ -49,13 +57,12 @@ internal interface BoundSensorMapUseCase {
                             }
                         }
                     )
-                }
-                .map { async { sensorDatabase.upsert(it, currentUuid) } }
-                .awaitAll()
+                }.map { async { sensorDatabase.upsert(it, currentUuid) } }.awaitAll()
         }.let { } // Returns Unit
     }
 
     object NoOp : BoundSensorMapUseCase {
         override suspend fun bind(qrCodeSensors: QrCodeSensors) {}
+        override suspend fun bind(sensorId: Int, location: Location) {}
     }
 }

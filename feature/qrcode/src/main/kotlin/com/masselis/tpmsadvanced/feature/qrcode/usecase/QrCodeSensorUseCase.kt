@@ -35,19 +35,19 @@ internal class QrCodeSensorUseCase(
     @Suppress("MagicNumber", "CyclomaticComplexMethod", "LongMethod", "MaxLineLength")
     fun analyse(
         controller: CameraController
-    ): Flow<Pair<QrCodeSensors, Set<Location>>> = cameraAnalyser
-        .findQrCode(controller)
-        .mapNotNull {
+    ): Flow<Pair<QrCodeSensors, Set<Location>>> = cameraAnalyser.findQrCode(controller).mapNotNull {
             fourSensorRegex.find(it)?.groupValues?.subList(1, 5)
-                ?: twoSensorRegex.find(it)?.groupValues?.subList(1, 3)
-                ?: run {
-                    if (wicarlinkSensorRegex.matches(it)) throw UnsupportedWircarlinkQrCode()
-                    else null
+                ?: twoSensorRegex.find(it)?.groupValues?.subList(1, 3) ?: run {
+                    if (singleSensorRegex.matches(it)) {
+                        val sensorId = SensorIdParser.parse(it) ?: return@mapNotNull null
+
+                        throw SingleSensorQrCode(sensorId)
+                    } else {
+                        null
+                    }
                 }
-        }
-        .map { stringHexs ->
-            stringHexs
-                .map { stringHex ->
+        }.map { stringHexs ->
+            stringHexs.map { stringHex ->
                     Pair(
                         // Trying to recognize the location with the id of the sensor
                         when (stringHex.first()) {
@@ -58,17 +58,12 @@ internal class QrCodeSensorUseCase(
                             else -> null
                         },
                         // Converts the hexadecimal id to an int
-                        stringHex
-                            .hexToByteArray()
-                            .let {
-                                ByteBuffer
-                                    .wrap(byteArrayOf(0x00) + it)
-                                    .order(ByteOrder.LITTLE_ENDIAN)
-                                    .int
+                        stringHex.hexToByteArray().let {
+                                ByteBuffer.wrap(byteArrayOf(0x00) + it)
+                                    .order(ByteOrder.LITTLE_ENDIAN).int
                             },
                     )
-                }
-                .mapIndexed { index, (location, id) ->
+                }.mapIndexed { index, (location, id) ->
                     QrCodeSensor(
                         id,
                         // The sensor id didn't provide the location, let's determine it with the
@@ -81,65 +76,52 @@ internal class QrCodeSensorUseCase(
                             else -> error("Filled list cannot have more than 4 entries")
                         }
                     )
-                }
-                .let {
+                }.let {
                     when (it.size) {
                         2 -> TwoWheel(it[0], it[1])
                         4 -> FourWheel(it[0], it[1], it[2], it[3])
                         else -> error("Unreachable state, previous regex should only contains 2 or 4 sensors, current sensors: $it")
                     }
                 }
-        }
-        .combine(
-            currentVehicleUseCase
-                .map { it.vehicle.kind }
-                .distinctUntilChanged()
-        ) { qrCodeSensors, vehicleKind ->
+        }.combine(currentVehicleUseCase.map { it.vehicle.kind }
+            .distinctUntilChanged()) { qrCodeSensors, vehicleKind ->
             Pair(
-                qrCodeSensors,
-                vehicleKind
-                    .locations
-                    .subtract(
+                qrCodeSensors, vehicleKind.locations.subtract(
                         when (vehicleKind) {
-                            CAR -> qrCodeSensors.map { it.wheel }
+                    CAR -> qrCodeSensors.map { it.wheel }
 
-                            SINGLE_AXLE_TRAILER -> qrCodeSensors.map { it.wheel.toSide() }
+                    SINGLE_AXLE_TRAILER -> qrCodeSensors.map { it.wheel.toSide() }
 
-                            MOTORCYCLE -> qrCodeSensors.map { it.wheel.toAxle() }
+                    MOTORCYCLE -> qrCodeSensors.map { it.wheel.toAxle() }
 
-                            TADPOLE_THREE_WHEELER -> qrCodeSensors
-                                .map {
-                                    when (it.wheel) {
-                                        FRONT_LEFT, FRONT_RIGHT -> it.wheel
-                                        REAR_LEFT, REAR_RIGHT -> it.wheel.toAxle()
-                                    }
-                                }
+                    TADPOLE_THREE_WHEELER -> qrCodeSensors.map {
+                            when (it.wheel) {
+                                FRONT_LEFT, FRONT_RIGHT -> it.wheel
+                                REAR_LEFT, REAR_RIGHT -> it.wheel.toAxle()
+                            }
+                        }
 
-                            DELTA_THREE_WHEELER -> qrCodeSensors
-                                .map {
-                                    when (it.wheel) {
-                                        FRONT_LEFT, FRONT_RIGHT -> it.wheel.toAxle()
-                                        REAR_LEFT, REAR_RIGHT -> it.wheel
-                                    }
-                                }
-                        }.toSet()
-                    )
-            )
-        }
-        .flowOn(Default)
+                    DELTA_THREE_WHEELER -> qrCodeSensors.map {
+                            when (it.wheel) {
+                                FRONT_LEFT, FRONT_RIGHT -> it.wheel.toAxle()
+                                REAR_LEFT, REAR_RIGHT -> it.wheel
+                            }
+                        }
+                }.toSet()))
+        }.flowOn(Default)
 
-    class UnsupportedWircarlinkQrCode : IllegalArgumentException()
+    data class SingleSensorQrCode(
+        val sensorId: Int
+    ) : IllegalArgumentException()
 
     companion object {
         // Test available here: https://regex101.com/r/aLJ0o6/1
         private val fourSensorRegex =
             "([0-9a-fA-F]{6})&([0-9a-fA-F]{6})&([0-9a-fA-F]{6})&([0-9a-fA-F]{6})".toRegex()
 
-        private val twoSensorRegex =
-            "([0-9a-fA-F]{6})&([0-9a-fA-F]{6})".toRegex()
+        private val twoSensorRegex = "([0-9a-fA-F]{6})&([0-9a-fA-F]{6})".toRegex()
 
-        // A Wicarlink/LYTPMS QR code only contains a single sensor's 6 hex character id, e.g. AF2206
-        private val wicarlinkSensorRegex =
-            "^([0-9a-fA-F]{6})$".toRegex()
+        // A single-sensor QR contains one six-character hexadecimal ID, e.g. 002D56
+        private val singleSensorRegex = "^[0-9a-fA-F]{6}$".toRegex()
     }
 }
