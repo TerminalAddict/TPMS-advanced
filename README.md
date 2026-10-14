@@ -145,6 +145,25 @@ git push
 
 Upstream changes are selected deliberately. TyrePing does not have to adopt every behavioural or release change made by TPMS Advanced.
 
+## Release methodology
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tyreping-release.ps1 -Version 0.4.0- Improved single-sensor QR binding
+```
+
+It will ask you to type RELEASE v0.4.0 before proceeding.
+
+The output will be like:
+```
+D:\TyrePing-Releases\0.4.0\
+    TyrePing-v0.4.0.apk
+    SHA256SUMS.txt
+    RELEASE_NOTES.md
+```
+
+or use `-Stable` when you want a normal release rather than a pre-release.
+
+Importantly: The script never uploads your keystore or keys.json. It also refuses to publish an APK whose signing certificate doesn't match the permanent TyrePing certificate.
+
 ## Development direction
 
 Planned or under evaluation:
