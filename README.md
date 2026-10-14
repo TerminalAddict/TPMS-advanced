@@ -60,15 +60,6 @@ TyrePing is installed as a separate Android application:
 nz.paulwillard.tyreping
 ```
 
-The project has its own:
-
-- App name and package identity
-- Blue TPMS/Bluetooth launcher icon
-- Adaptive Android launcher assets
-- Android 13+ monochrome themed icon
-- User-facing branding
-- GitHub release path
-
 The internal Kotlin package names remain based on the upstream project for now. They do not affect TyrePing’s ability to install as an independent app.
 
 ## Building
@@ -117,6 +108,7 @@ app/phone/build/outputs/apk/debug/phone-debug.apk
 
 ```cmd
 adb install -r app\phone\build\outputs\apk\debug\phone-debug.apk
+adb install -r app\phone\build\outputs\apk\release\phone-release.apk
 ```
 
 ## Upstream synchronisation
@@ -157,12 +149,6 @@ Upstream changes are selected deliberately. TyrePing does not have to adopt ever
 
 Planned or under evaluation:
 
-- Signed TyrePing release APKs
-- GitHub Releases
-- Sensor ID display
-- Live “time since last update” display
-- Manual sensor-ID entry
-- Improved single-sensor QR binding
 - Separate front and rear pressure ranges
 - Additional BLE sensor formats
 - Additional motorcycle-focused monitoring features
