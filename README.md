@@ -168,7 +168,6 @@ Importantly: The script never uploads your keystore or keys.json. It also refuse
 
 Planned or under evaluation:
 
-- Separate front and rear pressure ranges
 - Additional BLE sensor formats
 - Additional motorcycle-focused monitoring features
 - Optional display and notification settings
