@@ -6,6 +6,7 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.bar
 import com.masselis.tpmsadvanced.data.vehicle.model.Sensor
 import com.masselis.tpmsadvanced.data.vehicle.model.Temperature.CREATOR.celsius
 import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
+import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +35,17 @@ internal class LocatedTyreScannerUseCaseTest {
         val normal = scanner.normalScan().toList()
         assertEquals(normal, scanner.highDutyScan().toList())
         return normal
+    }
+
+    @Test
+    fun `double axle trailer keeps all four broadcast positions independent`() = runTest {
+        val locations = Vehicle.Kind.DOUBLE_AXLE_TRAILER.locations.toList()
+        val readings = locations.mapIndexed { index, location -> tyre(index + 1, location) }.toTypedArray()
+        locations.forEachIndexed { index, location ->
+            val result = read(location, *readings)
+            assertEquals(listOf(index + 1), result.map { it.sensorId })
+            assertEquals(listOf(location), result.map { it.location })
+        }
     }
 
     @Test

@@ -51,6 +51,14 @@ internal class ReadingLayoutTest {
         } }
     }
 
+    @Test fun doubleAxleTrailer() = paparazzi.snapshot {
+        MaterialTheme { Surface(Modifier.fillMaxSize()) {
+            LandscapeReadings(Vehicle.Kind.DOUBLE_AXLE_TRAILER.locations) {
+                ReadingValues(it, normal, size = ReadingSize.CARD)
+            }
+        } }
+    }
+
     @Test fun magnifiedWithLargeSystemFont() = paparazzi.snapshot {
         CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, fontScale = 1.5f)) {
             MaterialTheme { Surface(Modifier.fillMaxSize()) {

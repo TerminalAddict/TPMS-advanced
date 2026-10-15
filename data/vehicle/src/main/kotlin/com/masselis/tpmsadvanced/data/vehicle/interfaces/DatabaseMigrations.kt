@@ -13,6 +13,7 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Location
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.CAR
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.DELTA_THREE_WHEELER
+import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.DOUBLE_AXLE_TRAILER
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.MOTORCYCLE
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.SINGLE_AXLE_TRAILER
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.TADPOLE_THREE_WHEELER
@@ -54,7 +55,7 @@ internal fun Database.Companion.afterVersion3(
                 .value
                 .let { kind ->
                     when (kind) {
-                        CAR -> sensorLocation.asWheelLocation()
+                        CAR, DOUBLE_AXLE_TRAILER -> sensorLocation.asWheelLocation()
 
                         SINGLE_AXLE_TRAILER -> when (sensorLocation) {
                             FRONT_LEFT, REAR_LEFT -> Location.Side.LEFT

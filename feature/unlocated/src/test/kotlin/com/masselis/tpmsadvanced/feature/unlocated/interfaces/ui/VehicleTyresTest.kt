@@ -2,6 +2,9 @@ package com.masselis.tpmsadvanced.feature.unlocated.interfaces.ui
 
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
+import com.masselis.tpmsadvanced.data.vehicle.model.Location.Wheel
+import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind
+import kotlinx.collections.immutable.persistentMapOf
 import com.masselis.tpmsadvanced.feature.unlocated.interfaces.ui.CarAveragePreview
 import com.masselis.tpmsadvanced.feature.unlocated.interfaces.ui.CarBigPreview
 import com.masselis.tpmsadvanced.feature.unlocated.interfaces.ui.CarMinusPreview
@@ -34,6 +37,21 @@ internal class VehicleTyresTest {
     fun car() {
         paparazzi.snapshot {
             CarPreview()
+        }
+    }
+
+    @Test
+    fun doubleAxleTrailer() {
+        paparazzi.snapshot {
+            Vehicle(
+                kind = Kind.DOUBLE_AXLE_TRAILER,
+                states = persistentMapOf(
+                    Wheel.FRONT_LEFT to WheelState.Highlighted,
+                    Wheel.FRONT_RIGHT to WheelState.Fade,
+                    Wheel.REAR_LEFT to WheelState.Empty,
+                    Wheel.REAR_RIGHT to WheelState.Empty,
+                ),
+            )
         }
     }
 

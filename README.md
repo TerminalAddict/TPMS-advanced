@@ -41,7 +41,7 @@ TyrePing builds on the core capabilities of TPMS Advanced:
 - Low/high-pressure, temperature and low sensor battery alerts
 - Immediate alert updates when pressure or temperature thresholds change
 - Multiple vehicles with sensor ownership and cached readings kept with the correct tyre
-- Cars, motorcycles, trailers, and three-wheelers
+- Cars, motorcycles, single- and double-axle trailers, and three-wheelers
 - Pressure and temperature unit selection
 - QR-code sensor binding with invalid-code and conflicting-assignment checks
 - Favourite sensor binding
@@ -56,6 +56,11 @@ TyrePing builds on the core capabilities of TPMS Advanced:
 
 Supported sensor families include formats used by Sysgration, Pecham, Bekubee/HRTPMS, Wicarlink/LYTPMS, and related compatible BLE sensors. Exact compatibility depends on the sensor’s BLE advertisement format.
 
+For a double axle trailer, choose **Double axle trailer** when adding a vehicle. The hitch marks
+the front: assign front-left/right sensors to the axle nearest the hitch and rear-left/right
+sensors to the other axle. Four-sensor QR kits retain all four positions. Separate front/rear
+pressure limits are available for the two axles.
+
 ### Monitoring reliability
 
 Every accepted sensor broadcast refreshes the reading timestamp, even when pressure and temperature
@@ -67,7 +72,7 @@ An assigned sensor is kept with its saved tyre and vehicle. Cached readings rema
 returning to a screen, while changing a binding clears the previous tyre's reading. A silent sensor
 does not prevent alerts from other tyres. Threshold changes re-evaluate existing readings immediately.
 
-The current feature set has 91 passing automated tests, including local layout renders. Physical
+The current feature set is covered by automated tests, including local layout renders. Physical
 sensor reception, accessory/beacon detection, screen-off behaviour and real ride leak detection
 still need hardware validation. Leak detection is experimental and disabled by default.
 
@@ -278,16 +283,16 @@ the existing signing files in `secrets/`. Commit and push the intended changes f
 For the next release after `0.4.0`, check the prerequisites without building or publishing:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tyreping-release.ps1 -Version 0.5.0 -DryRun
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tyreping-release.ps1 -Version 0.6.0 -DryRun
 ```
 
 Then build and publish the pre-release:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tyreping-release.ps1 -Version 0.5.0
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tyreping-release.ps1 -Version 0.6.0
 ```
 
-The script asks you to type `RELEASE v0.5.0`. It updates the version, runs unit tests, builds and
+The script asks you to type `RELEASE v0.6.0`. It updates the version, runs unit tests, builds and
 verifies the signed APK, commits the version change, creates a tag, pushes `tyreping` and the tag,
 and publishes a GitHub pre-release. Release notes come from commit subjects unless `-NotesFile`
 is supplied. Choose a new, unused version for subsequent releases.
@@ -295,8 +300,8 @@ is supplied. Choose a new, unused version for subsequent releases.
 With the repository at `D:\TyrePing`, the default output is:
 
 ```text
-D:\TyrePing-Releases\0.5.0\
-    TyrePing-v0.5.0.apk
+D:\TyrePing-Releases\0.6.0\
+    TyrePing-v0.6.0.apk
     SHA256SUMS.txt
     RELEASE_NOTES.md
 ```
@@ -304,7 +309,7 @@ D:\TyrePing-Releases\0.5.0\
 Install that APK with:
 
 ```powershell
-adb install -r D:\TyrePing-Releases\0.5.0\TyrePing-v0.5.0.apk
+adb install -r D:\TyrePing-Releases\0.6.0\TyrePing-v0.6.0.apk
 ```
 
 Add `-Stable` to publish a normal release. Use `-Resume` only when recovering a failed publication

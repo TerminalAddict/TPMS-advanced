@@ -9,6 +9,15 @@ import kotlin.test.assertFailsWith
 
 internal class QrSensorParserTest {
     @Test
+    fun `double axle trailer retains all four kit sensors and their wheel positions`() {
+        val kit = QrSensorParser.parse("11AD8B&21563D&31A4F0&41A552")
+        val sensors = kit.forVehicle(Kind.DOUBLE_AXLE_TRAILER)
+        assertEquals(4, sensors.map { it.id }.toSet().size)
+        assertEquals(Kind.DOUBLE_AXLE_TRAILER.locations, sensors.map { it.location }.toSet())
+        assertEquals(kit.map { it.id to it.wheel }, sensors.map { it.id to it.location })
+    }
+
+    @Test
     fun `kit and single sensor IDs retain their different byte layouts`() {
         val kit = QrSensorParser.parse(" 11ad8b&21563d&31a4f0&41a552 ")
         assertEquals(-1951592192, kit.first().id)

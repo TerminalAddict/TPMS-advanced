@@ -54,6 +54,7 @@ public fun Vehicle(
             } else when (component.vehicle.kind) {
                 Kind.CAR -> Car(snackbarHostState, Modifier.fillMaxSize())
                 Kind.SINGLE_AXLE_TRAILER -> SingleAxleTrailer(snackbarHostState, Modifier.fillMaxSize())
+                Kind.DOUBLE_AXLE_TRAILER -> DoubleAxleTrailer(snackbarHostState, Modifier.fillMaxSize())
                 Kind.MOTORCYCLE -> Motorcycle(snackbarHostState, Modifier.fillMaxSize())
                 Kind.TADPOLE_THREE_WHEELER -> TadpoleThreadWheeler(snackbarHostState, Modifier.fillMaxSize())
                 Kind.DELTA_THREE_WHEELER -> DeltaThreeWheeler(snackbarHostState, Modifier.fillMaxSize())

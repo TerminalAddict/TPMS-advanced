@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.AlertDialog
@@ -163,7 +165,7 @@ private fun AddVehicle(
         modifier = modifier.testTag(CurrentVehicleDropdownTags.AddVehicle.root),
         title = { Text(text = "Add a new vehicle") },
         text = {
-            Column(modifier = Modifier.selectableGroup()) {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState()).selectableGroup()) {
                 OutlinedTextField(
                     label = { Text(text = "Vehicle name") },
                     value = vehicleName,
@@ -195,6 +197,7 @@ private fun AddVehicle(
                             text = when (kind) {
                                 Vehicle.Kind.CAR -> "Car"
                                 Vehicle.Kind.SINGLE_AXLE_TRAILER -> "Single axle trailer"
+                                Vehicle.Kind.DOUBLE_AXLE_TRAILER -> "Double axle trailer"
                                 Vehicle.Kind.MOTORCYCLE -> "Motorcycle"
                                 Vehicle.Kind.TADPOLE_THREE_WHEELER -> "Tadpole three wheeler"
                                 Vehicle.Kind.DELTA_THREE_WHEELER -> "Delta three wheeler"

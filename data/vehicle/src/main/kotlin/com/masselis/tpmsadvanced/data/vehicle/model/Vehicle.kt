@@ -76,7 +76,10 @@ public data class Vehicle(
          * N-N
          * ```
          */
-        DELTA_THREE_WHEELER(setOf(FRONT, REAR_LEFT, REAR_RIGHT));
+        DELTA_THREE_WHEELER(setOf(FRONT, REAR_LEFT, REAR_RIGHT)),
+
+        /** Two axles, with front referring to the axle nearest the hitch. */
+        DOUBLE_AXLE_TRAILER(setOf(FRONT_LEFT, FRONT_RIGHT, REAR_LEFT, REAR_RIGHT));
 
     }
 }

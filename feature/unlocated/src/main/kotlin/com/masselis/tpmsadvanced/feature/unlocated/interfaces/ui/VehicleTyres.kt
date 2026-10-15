@@ -41,7 +41,7 @@ internal fun Vehicle(
 ) {
     val modifier = modifier.aspectRatio(.5f)
     when (kind) {
-        Vehicle.Kind.CAR -> Car(
+        Vehicle.Kind.CAR, Vehicle.Kind.DOUBLE_AXLE_TRAILER -> Car(
             frontLeft = states.getValue(FRONT_LEFT),
             frontRight = states.getValue(FRONT_RIGHT),
             rearLeft = states.getValue(REAR_LEFT),
