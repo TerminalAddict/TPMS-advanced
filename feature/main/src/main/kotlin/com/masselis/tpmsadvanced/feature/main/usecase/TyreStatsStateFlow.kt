@@ -6,6 +6,8 @@ import com.masselis.tpmsadvanced.data.unit.model.PressureUnit
 import com.masselis.tpmsadvanced.data.unit.model.TemperatureUnit
 import com.masselis.tpmsadvanced.data.vehicle.model.Location
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure
+import com.masselis.tpmsadvanced.data.vehicle.model.PressureLoss
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorBattery
 import com.masselis.tpmsadvanced.data.vehicle.model.Temperature
 import com.masselis.tpmsadvanced.data.vehicle.model.TyreAtmosphere
 import com.masselis.tpmsadvanced.feature.main.usecase.TyreStatsStateFlow.State
@@ -18,13 +20,14 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.parcelize.Parcelize
 
-@Suppress("OPT_IN_TO_INHERITANCE", "UNCHECKED_CAST")
+@Suppress("OPT_IN_TO_INHERITANCE", "UNCHECKED_CAST", "LongParameterList")
 public class TyreStatsStateFlow internal constructor(
     location: Location,
     atmosphereUseCase: TyreAtmosphereUseCase,
     rangeUseCase: VehicleRangesUseCase,
     unitPreferences: UnitPreferences,
     scope: CoroutineScope,
+    sensorBindingUseCase: SensorBindingUseCase = SensorBindingUseCase.NoOp,
     stateFlow: StateFlow<State> = combine(
         atmosphereUseCase.listen(),
         rangeUseCase.highTemp,
@@ -52,7 +55,9 @@ public class TyreStatsStateFlow internal constructor(
                 atmosphere.pressure,
                 pressureUnit,
                 atmosphere.temperature,
-                temperatureUnit
+                temperatureUnit,
+                atmosphere.sensorBattery,
+                atmosphere.pressureLoss,
             ) else
                 when (atmosphere.temperature.celsius) {
                     in Float.NEGATIVE_INFINITY..highTemp.celsius -> State.Normal(
@@ -61,7 +66,9 @@ public class TyreStatsStateFlow internal constructor(
                         atmosphere.pressure,
                         pressureUnit,
                         atmosphere.temperature,
-                        temperatureUnit
+                        temperatureUnit,
+                        atmosphere.sensorBattery,
+                        atmosphere.pressureLoss,
                     )
 
                     in highTemp.celsius..Float.POSITIVE_INFINITY -> State.Alerting(
@@ -70,12 +77,15 @@ public class TyreStatsStateFlow internal constructor(
                         atmosphere.pressure,
                         pressureUnit,
                         atmosphere.temperature,
-                        temperatureUnit
+                        temperatureUnit,
+                        atmosphere.sensorBattery,
+                        atmosphere.pressureLoss,
                     )
 
                     else -> error("Unreachable state")
                 }
         }
+        .forBinding(sensorBindingUseCase, State.NotDetected)
         .catch { emit(State.NotDetected) }
         .stateIn(scope, WhileSubscribed(), State.NotDetected),
 ) : StateFlow<State> by stateFlow {
@@ -103,6 +113,8 @@ public class TyreStatsStateFlow internal constructor(
             public val pressureUnit: PressureUnit,
             public val temperature: Temperature,
             public val temperatureUnit: TemperatureUnit,
+            public val sensorBattery: SensorBattery? = null,
+            public val pressureLoss: PressureLoss? = null,
         ) : State()
 
         // Show the read values from the tyre in red
@@ -114,6 +126,8 @@ public class TyreStatsStateFlow internal constructor(
             public val pressureUnit: PressureUnit,
             public val temperature: Temperature,
             public val temperatureUnit: TemperatureUnit,
+            public val sensorBattery: SensorBattery? = null,
+            public val pressureLoss: PressureLoss? = null,
         ) : State()
     }
 }

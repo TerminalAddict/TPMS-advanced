@@ -4,10 +4,14 @@ package com.masselis.tpmsadvanced.feature.main.interfaces.composable
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
@@ -40,12 +44,21 @@ public fun Vehicle(
     modifier: Modifier = Modifier,
 ) {
     KeepScreenOn()
-    when (component.vehicle.kind) {
-        Kind.CAR -> Car(snackbarHostState, modifier)
-        Kind.SINGLE_AXLE_TRAILER -> SingleAxleTrailer(snackbarHostState, modifier)
-        Kind.MOTORCYCLE -> Motorcycle(snackbarHostState, modifier)
-        Kind.TADPOLE_THREE_WHEELER -> TadpoleThreadWheeler(snackbarHostState, modifier)
-        Kind.DELTA_THREE_WHEELER -> DeltaThreeWheeler(snackbarHostState, modifier)
+    CompositionLocalProvider(LocalVehicleComponent provides component) {
+        BoxWithConstraints(modifier) {
+            if (maxWidth > maxHeight) {
+                LandscapeReadings(component.vehicle.kind.locations, Modifier.fillMaxSize(),
+                    binding = { BindSensorButton(it) }) { location ->
+                    TyreStat(location, Modifier.fillMaxWidth(), large = true)
+                }
+            } else when (component.vehicle.kind) {
+                Kind.CAR -> Car(snackbarHostState, Modifier.fillMaxSize())
+                Kind.SINGLE_AXLE_TRAILER -> SingleAxleTrailer(snackbarHostState, Modifier.fillMaxSize())
+                Kind.MOTORCYCLE -> Motorcycle(snackbarHostState, Modifier.fillMaxSize())
+                Kind.TADPOLE_THREE_WHEELER -> TadpoleThreadWheeler(snackbarHostState, Modifier.fillMaxSize())
+                Kind.DELTA_THREE_WHEELER -> DeltaThreeWheeler(snackbarHostState, Modifier.fillMaxSize())
+            }
+        }
     }
 }
 

@@ -8,6 +8,8 @@ public sealed interface Tyre : ScannerRecord, Parcelable {
     public val temperature: Temperature
     public val battery: UShort
     public val isAlarm: Boolean
+    public val sensorBattery: SensorBattery?
+    public val pressureLoss: PressureLoss?
 
     @Parcelize
     public data class Unlocated(
@@ -17,7 +19,9 @@ public sealed interface Tyre : ScannerRecord, Parcelable {
         override val pressure: Pressure,
         override val temperature: Temperature,
         override val battery: UShort,
-        override val isAlarm: Boolean
+        override val isAlarm: Boolean,
+        override val sensorBattery: SensorBattery? = null,
+        override val pressureLoss: PressureLoss? = null,
     ) : Tyre
 
     @Parcelize
@@ -30,6 +34,8 @@ public sealed interface Tyre : ScannerRecord, Parcelable {
         override val battery: UShort,
         override val isAlarm: Boolean,
         val location: Location,
+        override val sensorBattery: SensorBattery? = null,
+        override val pressureLoss: PressureLoss? = null,
     ) : Tyre {
         public constructor(source: Tyre, location: Location) : this(
             source.timestamp,
@@ -39,7 +45,9 @@ public sealed interface Tyre : ScannerRecord, Parcelable {
             source.temperature,
             source.battery,
             source.isAlarm,
-            location
+            location,
+            source.sensorBattery,
+            source.pressureLoss,
         )
     }
 }

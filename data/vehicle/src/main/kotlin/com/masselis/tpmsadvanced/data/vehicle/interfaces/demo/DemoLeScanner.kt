@@ -9,10 +9,17 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Temperature.CREATOR.celsius
 import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 
 @Suppress("MagicNumber")
 public class DemoLeScanner : BluetoothLeScanner {
+
+    override val scanStatus: StateFlow<BluetoothLeScanner.ScanStatus> = MutableStateFlow<BluetoothLeScanner.ScanStatus>(
+        BluetoothLeScanner.ScanStatus.Scanning
+    ).asStateFlow()
 
     private val frontLeft = listOf<ScannerRecord>(
         Tyre.Located(

@@ -10,6 +10,7 @@ android {
 }
 
 dependencies {
+    testImplementation(project(":core:test"))
     implementation(project(":feature:main"))
 
     implementation(project(":data:vehicle"))

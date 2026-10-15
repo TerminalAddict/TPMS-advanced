@@ -71,7 +71,7 @@ public fun QrCodeScan(
     }
 }
 
-@Suppress("NAME_SHADOWING")
+@Suppress("NAME_SHADOWING", "LongMethod")
 @Composable
 private fun Preview(
     snackbarHostState: SnackbarHostState,
@@ -140,6 +140,7 @@ private fun Preview(
         is State.Error -> ErrorAlert(
             state = state,
             onDismissRequest = viewModel::scanAgain,
+            openUnlocatedSensorBinding = openUnlocatedSensorBinding,
         )
     }
 
@@ -301,11 +302,21 @@ private fun BindingAlert(
 private fun ErrorAlert(
     state: State.Error,
     onDismissRequest: () -> Unit,
+    openUnlocatedSensorBinding: () -> Unit,
 ) {
     AlertDialog(
         text = {
             Text(text = StringBuilder("Detected inconsistency with the QR code").apply {
                     when (state) {
+                        State.Error.InvalidCode -> append(
+                            "\n\nThis is not a supported TPMS QR code. Scan the sensor label or enter its six-character ID."
+                        )
+
+                        is State.Error.ConflictingAssignments -> {
+                            append("\n\nSeveral sensors would be assigned to the same tyre. Bind them one at a time instead.")
+                            state.locations.forEach { append("\n - "); appendLoc(it) }
+                        }
+
                         is State.Error.DuplicateWheelLocation -> {
                             append(
                                 "\n\nThe QR code contains different sensors " + "associated with the same wheel."
@@ -329,6 +340,11 @@ private fun ErrorAlert(
         confirmButton = {
             TextButton(onClick = onDismissRequest) {
                 Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { onDismissRequest(); openUnlocatedSensorBinding() }) {
+                Text("Bind via Bluetooth")
             }
         },
     )

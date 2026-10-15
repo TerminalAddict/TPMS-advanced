@@ -30,6 +30,7 @@ public class TyreIconStateFlow internal constructor(
     atmosphereUseCase: TyreAtmosphereUseCase,
     rangeUseCase: VehicleRangesUseCase,
     scope: CoroutineScope,
+    sensorBindingUseCase: SensorBindingUseCase = SensorBindingUseCase.NoOp,
     stateFlow: StateFlow<State> = combine(
         atmosphereUseCase.listen(),
         rangeUseCase.highTemp,
@@ -48,8 +49,9 @@ public class TyreIconStateFlow internal constructor(
         ))
     }
         .transformLatest { (atmosphere, highTemp, normalTemp, lowTemp, lowPressure, highPressure) ->
+            val hasWarning = atmosphere.pressureLoss != null || atmosphere.sensorBattery?.isLow == true
             emit(
-                if (atmosphere.pressure.hasPressure().not() ||
+                if (hasWarning || atmosphere.pressure.hasPressure().not() ||
                     atmosphere.pressure !in lowPressure..highPressure
                 )
                     State.Alerting
@@ -91,6 +93,7 @@ public class TyreIconStateFlow internal constructor(
                 .also { delay(it) }
             emit(State.NotDetected)
         }
+        .forBinding(sensorBindingUseCase, State.NotDetected)
         .catch {
             Logger.withTag("TyreIconStateFlow").e("Failed to listen for atmosphere", it)
             emit(State.DetectionIssue)

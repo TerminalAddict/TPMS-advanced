@@ -20,38 +20,39 @@ internal class LocatedTyreScannerUseCase(
     private fun Flow<ScannerRecord>.mapWithLocation() = this
         .mapNotNull { it as? Tyre }
         .mapNotNull { tyreRecord ->
-            // Takes the location from the bound sensor if any exists
-            sensorBindingUseCase.boundSensor()
-                .value
-                .takeIf { tyreRecord.sensorId == it?.id }
-                ?.let { sensor -> Tyre.Located(tyreRecord, sensor.location) }
-            // Cannot compute location from a bound sensor, let's take a look at the tyreRecord itself
-            // to see if it matches the current location
-                ?: when (tyreRecord) {
-                    is Tyre.Located ->
-                        when (currentLocation) {
-                            is Location.Wheel ->
-                                tyreRecord.location
+            val bound = sensorBindingUseCase.boundSensor().value
+            if (bound != null) {
+                return@mapNotNull tyreRecord
+                    .takeIf { it.sensorId == bound.id && bound.location == currentLocation }
+                    ?.let { Tyre.Located(it, currentLocation) }
+            }
+            // Embedded wheel positions must not leak a sensor into other vehicles or locations.
+            if (sensorBindingUseCase.isBound(tyreRecord.sensorId)) return@mapNotNull null
+            when (tyreRecord) {
+                is Tyre.Located ->
+                    when (currentLocation) {
+                        is Location.Wheel ->
+                            tyreRecord.location
 
-                            is Location.Axle -> when (tyreRecord.location) {
-                                is Location.Wheel -> (tyreRecord.location as Location.Wheel).toAxle()
-                                is Location.Axle -> tyreRecord.location
-                                is Location.Side -> null
-                            }
-
-                            is Location.Side -> when (tyreRecord.location) {
-                                is Location.Wheel -> (tyreRecord.location as Location.Wheel).toSide()
-                                is Location.Axle -> null
-                                is Location.Side -> tyreRecord.location
-                            }
+                        is Location.Axle -> when (tyreRecord.location) {
+                            is Location.Wheel -> (tyreRecord.location as Location.Wheel).toAxle()
+                            is Location.Axle -> tyreRecord.location
+                            is Location.Side -> null
                         }
 
-                    is Tyre.Unlocated -> null
-                }.let { locationToCompare ->
-                    if (locationToCompare == currentLocation)
-                        Tyre.Located(tyreRecord, currentLocation)
-                    else
-                        null
-                }
+                        is Location.Side -> when (tyreRecord.location) {
+                            is Location.Wheel -> (tyreRecord.location as Location.Wheel).toSide()
+                            is Location.Axle -> null
+                            is Location.Side -> tyreRecord.location
+                        }
+                    }
+
+                is Tyre.Unlocated -> null
+            }.let { locationToCompare ->
+                if (locationToCompare == currentLocation)
+                    Tyre.Located(tyreRecord, currentLocation)
+                else
+                    null
+            }
         }
 }

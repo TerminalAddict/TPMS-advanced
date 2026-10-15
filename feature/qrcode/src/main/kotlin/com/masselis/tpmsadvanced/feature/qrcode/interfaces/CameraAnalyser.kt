@@ -10,7 +10,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapNotNull
@@ -49,7 +48,6 @@ internal class CameraAnalyser {
             awaitClose { controller.clearImageAnalysisAnalyzer() }
         }.flowOn(Dispatchers.Main.immediate)
             .flatMapConcat { it.asFlow() }
-            .filter { it.valueType == Barcode.TYPE_TEXT }
             .mapNotNull { it.rawValue }
 
     class CameraUnavailable(source: IllegalArgumentException) : IllegalArgumentException(source)

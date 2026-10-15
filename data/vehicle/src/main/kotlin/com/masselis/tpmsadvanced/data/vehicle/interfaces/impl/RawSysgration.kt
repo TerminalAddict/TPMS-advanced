@@ -7,6 +7,7 @@ import com.masselis.tpmsadvanced.core.common.now
 import com.masselis.tpmsadvanced.data.vehicle.model.Location
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.kpa
 import com.masselis.tpmsadvanced.data.vehicle.model.Temperature.CREATOR.celsius
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorBattery
 import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -53,7 +54,7 @@ internal data class RawSysgration private constructor(
         .div(100f)
         .celsius
 
-    fun battery() = manufacturerData[14].toInt().toUShort()
+    fun battery() = (manufacturerData[14].toInt() and 0xFF).toUShort()
 
     fun isAlarm() = manufacturerData[15] == PRESSURE_ALARM_BYTE
 
@@ -65,7 +66,8 @@ internal data class RawSysgration private constructor(
         temperature(),
         battery(),
         isAlarm(),
-        location()
+        location(),
+        battery().toInt().takeIf { it in 0..100 }?.let(SensorBattery::Percentage)
     )
 
     override fun equals(other: Any?): Boolean {

@@ -2,21 +2,9 @@ package com.masselis.tpmsadvanced.feature.qrcode.usecase
 
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorDatabase
 import com.masselis.tpmsadvanced.data.vehicle.model.Location
-import com.masselis.tpmsadvanced.data.vehicle.model.Location.Wheel.FRONT_LEFT
-import com.masselis.tpmsadvanced.data.vehicle.model.Location.Wheel.FRONT_RIGHT
-import com.masselis.tpmsadvanced.data.vehicle.model.Location.Wheel.REAR_LEFT
-import com.masselis.tpmsadvanced.data.vehicle.model.Location.Wheel.REAR_RIGHT
 import com.masselis.tpmsadvanced.data.vehicle.model.Sensor
-import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.CAR
-import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.DELTA_THREE_WHEELER
-import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.MOTORCYCLE
-import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.SINGLE_AXLE_TRAILER
-import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.TADPOLE_THREE_WHEELER
 import com.masselis.tpmsadvanced.feature.main.usecase.CurrentVehicleUseCase
 import com.masselis.tpmsadvanced.feature.qrcode.model.QrCodeSensors
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 
 internal interface BoundSensorMapUseCase {
     suspend fun bind(qrCodeSensors: QrCodeSensors)
@@ -27,38 +15,14 @@ internal interface BoundSensorMapUseCase {
         private val currentVehicleUseCase: CurrentVehicleUseCase,
     ) : BoundSensorMapUseCase {
         override suspend fun bind(sensorId: Int, location: Location) {
-            val currentUuid = currentVehicleUseCase.value.vehicle.uuid
-
-            sensorDatabase.upsert(
-                Sensor(sensorId, location), currentUuid
-            )
+            sensorDatabase.upsert(Sensor(sensorId, location), currentVehicleUseCase.value.vehicle.uuid)
         }
 
-        override suspend fun bind(qrCodeSensors: QrCodeSensors) = coroutineScope {
-            val currentUuid = currentVehicleUseCase.value.vehicle.uuid
-            val kind = currentVehicleUseCase.value.vehicle.kind
-            qrCodeSensors.map {
-                    Sensor(
-                        it.id, when (kind) {
-                            CAR -> it.wheel
-
-                            SINGLE_AXLE_TRAILER -> it.wheel.toSide()
-
-                            MOTORCYCLE -> it.wheel.toAxle()
-
-                            TADPOLE_THREE_WHEELER -> when (it.wheel) {
-                                FRONT_LEFT, FRONT_RIGHT -> it.wheel
-                                REAR_LEFT, REAR_RIGHT -> it.wheel.toAxle()
-                            }
-
-                            DELTA_THREE_WHEELER -> when (it.wheel) {
-                                FRONT_LEFT, FRONT_RIGHT -> it.wheel.toAxle()
-                                REAR_LEFT, REAR_RIGHT -> it.wheel
-                            }
-                        }
-                    )
-                }.map { async { sensorDatabase.upsert(it, currentUuid) } }.awaitAll()
-        }.let { } // Returns Unit
+        override suspend fun bind(qrCodeSensors: QrCodeSensors) {
+            val vehicle = currentVehicleUseCase.value.vehicle
+            // Validate every converted location before making any changes, then write atomically.
+            sensorDatabase.upsert(qrCodeSensors.forVehicle(vehicle.kind), vehicle.uuid)
+        }
     }
 
     object NoOp : BoundSensorMapUseCase {

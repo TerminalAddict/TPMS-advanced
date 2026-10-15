@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import com.masselis.tpmsadvanced.core.common.appContext
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import com.masselis.tpmsadvanced.feature.background.interfaces.MonitorService
+import com.masselis.tpmsadvanced.feature.background.interfaces.RidePreferences
 import com.masselis.tpmsadvanced.feature.background.interfaces.MonitorService.Companion.intent
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.BUFFERED
@@ -66,6 +67,7 @@ internal class BackgroundViewModel(
 
     fun disableMonitoring() = viewModelScope.launch {
         require(stateFlow.value is State.Monitoring)
+        RidePreferences(appContext).armedVehicle = null
         appContext.stopService(serviceIntent)
     }
 

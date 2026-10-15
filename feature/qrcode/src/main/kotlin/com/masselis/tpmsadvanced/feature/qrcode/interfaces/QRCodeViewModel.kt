@@ -7,7 +7,9 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Location
 import com.masselis.tpmsadvanced.feature.main.usecase.CurrentVehicleUseCase
 import com.masselis.tpmsadvanced.feature.qrcode.model.QrCodeSensors
 import com.masselis.tpmsadvanced.feature.qrcode.usecase.BoundSensorMapUseCase
+import com.masselis.tpmsadvanced.feature.qrcode.usecase.ConflictingLocations
 import com.masselis.tpmsadvanced.feature.qrcode.usecase.QrCodeSensorUseCase
+import com.masselis.tpmsadvanced.feature.qrcode.usecase.QrSensorParser
 import com.masselis.tpmsadvanced.feature.qrcode.usecase.SensorIdParser
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
@@ -60,6 +62,10 @@ internal class QRCodeViewModel(
         }
 
         sealed interface Error : State {
+            data object InvalidCode : Error
+
+            data class ConflictingAssignments(val locations: Set<Location>) : Error
+
             @JvmInline
             value class DuplicateWheelLocation(val wheels: Collection<Location.Wheel>) : Error
 
@@ -106,6 +112,8 @@ internal class QRCodeViewModel(
                                 is QrCodeSensors.DuplicateId -> exc.ids.duplicates()
                                     .let(State.Error::DuplicateId).also { emit(it) }
 
+                                is QrSensorParser.InvalidCode -> emit(State.Error.InvalidCode)
+                                is ConflictingLocations -> emit(State.Error.ConflictingAssignments(exc.locations))
                                 else -> throw exc
                             }
                         }
@@ -125,7 +133,12 @@ internal class QRCodeViewModel(
     fun bindSensors() = viewModelScope.launch {
         val state = mutableStateFlow.value
         if (state !is State.AskForBinding) return@launch
-        boundSensorMapUseCase.bind(state.qrCodeSensors)
+        try {
+            boundSensorMapUseCase.bind(state.qrCodeSensors)
+        } catch (conflict: ConflictingLocations) {
+            mutableStateFlow.value = State.Error.ConflictingAssignments(conflict.locations)
+            return@launch
+        }
         channel.send(Event.Leave)
     }
 

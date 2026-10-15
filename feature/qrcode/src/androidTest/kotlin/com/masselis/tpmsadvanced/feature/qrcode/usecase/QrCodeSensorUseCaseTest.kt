@@ -111,16 +111,8 @@ internal class QrCodeSensorUseCaseTest {
             every { vehicle.kind } returns SINGLE_AXLE_TRAILER
         })
         test().analyse(mockk()).test {
-            val (qrCodeSensor, missingLocations) = awaitItem()
-            assertEquals(
-                QrCodeSensors.TwoWheel(
-                    QrCodeSensor(-1951592192, FRONT_LEFT),
-                    QrCodeSensor(-257675008, REAR_LEFT),
-                ),
-                qrCodeSensor
-            )
-            assertContentEquals(listOf(Location.Side.RIGHT), missingLocations)
-            cancelAndIgnoreRemainingEvents()
+            kotlin.test.assertIs<ConflictingLocations>(awaitError())
+
         }
     }
 
@@ -131,18 +123,8 @@ internal class QrCodeSensorUseCaseTest {
             every { vehicle.kind } returns TADPOLE_THREE_WHEELER
         })
         test().analyse(mockk()).test {
-            val (qrCodeSensor, missingLocations) = awaitItem()
-            assertEquals(
-                QrCodeSensors.FourWheel(
-                    QrCodeSensor(-1951592192, FRONT_LEFT),
-                    QrCodeSensor(1029054720, FRONT_RIGHT),
-                    QrCodeSensor(-257675008, REAR_LEFT),
-                    QrCodeSensor(1386561792, REAR_RIGHT),
-                ),
-                qrCodeSensor
-            )
-            assertContentEquals(emptyList(), missingLocations)
-            cancelAndIgnoreRemainingEvents()
+            kotlin.test.assertIs<ConflictingLocations>(awaitError())
+
         }
     }
 
@@ -153,18 +135,8 @@ internal class QrCodeSensorUseCaseTest {
             every { vehicle.kind } returns DELTA_THREE_WHEELER
         })
         test().analyse(mockk()).test {
-            val (qrCodeSensor, missingLocations) = awaitItem()
-            assertEquals(
-                QrCodeSensors.FourWheel(
-                    QrCodeSensor(-1951592192, FRONT_LEFT),
-                    QrCodeSensor(1029054720, FRONT_RIGHT),
-                    QrCodeSensor(-257675008, REAR_LEFT),
-                    QrCodeSensor(1386561792, REAR_RIGHT),
-                ),
-                qrCodeSensor
-            )
-            assertContentEquals(emptyList(), missingLocations)
-            cancelAndIgnoreRemainingEvents()
+            kotlin.test.assertIs<ConflictingLocations>(awaitError())
+
         }
     }
 }

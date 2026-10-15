@@ -8,5 +8,7 @@ public data class TyreAtmosphere(
     val timestamp: Double,
     val sensorId: Int,
     val pressure: Pressure,
-    val temperature: Temperature
+    val temperature: Temperature,
+    val sensorBattery: SensorBattery? = null,
+    val pressureLoss: PressureLoss? = null,
 ) : Parcelable

@@ -1,6 +1,7 @@
 package com.masselis.tpmsadvanced.feature.main.ioc.tyre
 
 import com.masselis.tpmsadvanced.data.unit.interfaces.UnitPreferences
+import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorDatabase
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.TyreDatabase
@@ -64,7 +65,9 @@ public interface TyreBindings {
         tyreDatabase: TyreDatabase,
         listenTyreUseCase: ListenTyreSmartDutyUseCase,
         demoOrBleScannerUseCase: DemoOrBleScannerUseCase,
+        sensorBindingUseCase: SensorBindingUseCase,
         @VehicleLifecycle scope: CoroutineScope,
+        preferences: AppPreferences,
     ): ListenTyreWithDatabaseUseCase =
         if (demoOrBleScannerUseCase.isDemo.value)
             ListenTyreWithDatabaseUseCase.Wrapper(
@@ -76,7 +79,9 @@ public interface TyreBindings {
                 location,
                 tyreDatabase,
                 listenTyreUseCase,
-                scope
+                scope,
+                sensorBindingUseCase,
+                preferences.detectLeaks,
             )
 
 
@@ -90,8 +95,8 @@ public interface TyreBindings {
     private fun listenTyreUseCase(uc: ListenBoundTyreUseCase): ListenTyreUseCase = uc
 
     @Provides
-    private fun tyreAtmosphereUseCase(listenTyreUseCase: ListenTyreUseCase): TyreAtmosphereUseCase =
-        TyreAtmosphereUseCase(listenTyreUseCase)
+    private fun tyreAtmosphereUseCase(listenTyreUseCase: ListenTyreUseCase, preferences: AppPreferences): TyreAtmosphereUseCase =
+        TyreAtmosphereUseCase(listenTyreUseCase, preferences.detectLeaks)
 
     @Provides
     private fun searchSensorToBindUseCase(
@@ -119,13 +124,15 @@ public interface TyreBindings {
         atmosphereUseCase: TyreAtmosphereUseCase,
         rangeUseCase: VehicleRangesUseCase,
         unitPreferences: UnitPreferences,
+        sensorBindingUseCase: SensorBindingUseCase,
         @VehicleLifecycle scope: CoroutineScope,
     ): TyreStatsStateFlow = TyreStatsStateFlow(
         location,
         atmosphereUseCase,
         rangeUseCase,
         unitPreferences,
-        scope
+        scope,
+        sensorBindingUseCase
     )
 
     @SingleIn(TyreComponent.Scope::class)
@@ -134,12 +141,14 @@ public interface TyreBindings {
         location: Location,
         atmosphereUseCase: TyreAtmosphereUseCase,
         rangeUseCase: VehicleRangesUseCase,
+        sensorBindingUseCase: SensorBindingUseCase,
         @VehicleLifecycle scope: CoroutineScope,
     ): TyreIconStateFlow = TyreIconStateFlow(
         location,
         atmosphereUseCase,
         rangeUseCase,
-        scope
+        scope,
+        sensorBindingUseCase
     )
 
     @Provides

@@ -2,15 +2,11 @@ package com.masselis.tpmsadvanced.feature.main.usecase
 
 import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
 
 internal class ListenTyreSmartDutyUseCase(
     private val scanner: LocatedTyreScannerUseCase,
 ) : ListenTyreUseCase {
-    override fun listen(): Flow<Tyre.Located> = flow {
-        emit(scanner.highDutyScan().first())
-        emitAll(scanner.normalScan())
-    }
+    // Keep a single subscription: cancelling after the first reading can stop the platform scan
+    // and introduce a delayed restart before monitoring begins.
+    override fun listen(): Flow<Tyre.Located> = scanner.normalScan()
 }

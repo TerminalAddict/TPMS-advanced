@@ -51,7 +51,8 @@ sqldelight {
                     throw GradleException("A base snapshot named \"$migration.db\" is missing to run migration \"$migration.sqm\"")
             }
             // Check a snapshot exists after the latest migration
-            if (snapshots.last() == migrations.last()) {
+            val generatingSchema = gradle.startParameter.taskNames.any { it.endsWith("DatabaseSchema") }
+            if (snapshots.last() == migrations.last() && !generatingSchema) {
                 throw GradleException("The latest migration exists but no snapshot is available, run \"generateDebugDatabaseSchema\"")
             }
         }

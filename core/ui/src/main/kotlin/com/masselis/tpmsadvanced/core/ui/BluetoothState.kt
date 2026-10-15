@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.getSystemService
+import androidx.core.content.ContextCompat.RECEIVER_EXPORTED
 import com.masselis.tpmsadvanced.core.common.asFlow
 import kotlinx.coroutines.flow.map
 
@@ -32,7 +33,7 @@ public fun rememberBluetoothState(): BluetoothState {
     val state = remember(context) { MutableBluetoothState(context) }
     LaunchedEffect(state) {
         IntentFilter(ACTION_STATE_CHANGED)
-            .asFlow()
+            .asFlow(RECEIVER_EXPORTED)
             .map { it.getIntExtra(EXTRA_STATE, STATE_OFF) == STATE_ON }
             .collect { state.isEnabled = it }
     }

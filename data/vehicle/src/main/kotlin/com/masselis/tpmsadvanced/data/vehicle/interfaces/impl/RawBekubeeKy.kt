@@ -7,6 +7,7 @@ import co.touchlab.kermit.Logger
 import com.masselis.tpmsadvanced.core.common.now
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.psi
 import com.masselis.tpmsadvanced.data.vehicle.model.Temperature.CREATOR.celsius
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorBattery
 import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import java.util.UUID.fromString
 
@@ -32,7 +33,7 @@ internal data class RawBekubeeKy private constructor(
         .toFloat()
         .psi
 
-    fun battery() = data[1].toUShort() // Returns 27 for 2.7 volts
+    fun battery() = (data[1].toInt() and 0xFF).toUShort() // Returns 27 for 2.7 volts
 
     fun temperature() = data[2].toFloat().celsius
 
@@ -43,7 +44,8 @@ internal data class RawBekubeeKy private constructor(
         pressure(),
         temperature(),
         battery(),
-        battery() < 26u // Mimics the alarm from the official app
+        false,
+        SensorBattery.Voltage(battery().toInt() / 10f)
     )
 
     override fun equals(other: Any?): Boolean {

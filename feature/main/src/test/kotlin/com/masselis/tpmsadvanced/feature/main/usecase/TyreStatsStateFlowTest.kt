@@ -6,6 +6,7 @@ import com.masselis.tpmsadvanced.data.unit.interfaces.UnitPreferences
 import com.masselis.tpmsadvanced.data.unit.model.PressureUnit
 import com.masselis.tpmsadvanced.data.unit.model.TemperatureUnit
 import com.masselis.tpmsadvanced.data.vehicle.model.Location.Wheel.FRONT_LEFT
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorBattery
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.bar
 import com.masselis.tpmsadvanced.data.vehicle.model.Temperature.CREATOR.celsius
 import com.masselis.tpmsadvanced.data.vehicle.model.TyreAtmosphere
@@ -30,6 +31,7 @@ internal class TyreStatsStateFlowTest {
     private fun test(
         timestamp: Double,
         sensorId: Int,
+        battery: SensorBattery? = null,
     ): TyreStatsStateFlow {
         val atmosphereUseCase = mockk<TyreAtmosphereUseCase> {
             every { listen() } returns flowOf(
@@ -38,6 +40,7 @@ internal class TyreStatsStateFlowTest {
                     sensorId = sensorId,
                     pressure = 2f.bar,
                     temperature = 25f.celsius,
+                    sensorBattery = battery,
                 )
             )
         }
@@ -61,6 +64,17 @@ internal class TyreStatsStateFlowTest {
             unitPreferences = unitPreferences,
             scope = scope.backgroundScope,
         )
+    }
+
+    @Test
+    fun `low battery is retained without inventing a pressure alert`() = runTest {
+        val battery = SensorBattery.Voltage(2f)
+        test(1.0, 1, battery).test {
+            assertIs<State.NotDetected>(awaitItem())
+            val state = assertIs<State.Normal>(awaitItem())
+            assertEquals(battery, state.sensorBattery)
+            assertEquals(2f.bar, state.pressure)
+        }
     }
 
     @Test

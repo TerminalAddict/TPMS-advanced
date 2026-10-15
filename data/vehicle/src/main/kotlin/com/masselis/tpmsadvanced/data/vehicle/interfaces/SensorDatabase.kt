@@ -30,6 +30,12 @@ public class SensorDatabase internal constructor(
         vehicleId: UUID,
     ): Unit = withContext(IO) { database.transaction { upsertSync(sensor, vehicleId) } }
 
+    public suspend fun upsert(sensors: List<Sensor>, vehicleId: UUID): Unit = withContext(IO) {
+        require(sensors.distinctBy { it.id }.size == sensors.size) { "Duplicate sensor IDs" }
+        require(sensors.distinctBy { it.location }.size == sensors.size) { "Conflicting sensor locations" }
+        database.transaction { sensors.forEach { upsertSync(it, vehicleId) } }
+    }
+
     private fun upsertSync(
         sensor: Sensor,
         vehicleId: UUID,

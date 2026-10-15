@@ -6,6 +6,8 @@ import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES.TIRAMISU
 import androidx.core.content.edit
 import com.masselis.tpmsadvanced.core.common.appContext
+import com.masselis.tpmsadvanced.core.common.observableStateFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 
 public class AppPreferences internal constructor(
     context: Context
@@ -14,6 +16,10 @@ public class AppPreferences internal constructor(
         "APP",
         Context.MODE_PRIVATE
     )
+
+    public val detectLeaks: MutableStateFlow<Boolean> = observableStateFlow(
+        sharedPreferences.getBoolean("DETECT_LEAKS", false)
+    ) { _, enabled -> sharedPreferences.edit { putBoolean("DETECT_LEAKS", enabled) } }
 
     private val packageInfo
         get() = appContext

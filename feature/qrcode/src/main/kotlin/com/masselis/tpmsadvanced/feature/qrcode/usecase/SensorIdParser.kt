@@ -11,6 +11,7 @@ internal object SensorIdParser {
      * Example:
      * 002D56 -> 0x562D00
      */
+    @Suppress("MagicNumber") // Three little-endian bytes of a printed sensor ID.
     fun parse(value: String): Int? {
         val normalized = value.trim()
 
@@ -20,6 +21,8 @@ internal object SensorIdParser {
 
         val bytes = normalized.hexToByteArray()
 
-        return (bytes[0].toInt() and 0xFF) or ((bytes[1].toInt() and 0xFF) shl 8) or ((bytes[2].toInt() and 0xFF) shl 16)
+        return (bytes[0].toInt() and 0xFF) or
+            ((bytes[1].toInt() and 0xFF) shl 8) or
+            ((bytes[2].toInt() and 0xFF) shl 16)
     }
 }
