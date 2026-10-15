@@ -14,7 +14,7 @@ import java.nio.ByteOrder
 import java.util.UUID.fromString
 
 @OptIn(ExperimentalUnsignedTypes::class)
-@Suppress("MagicNumber")
+@Suppress("MagicNumber", "TooManyFunctions")
 @ConsistentCopyVisibility
 internal data class RawSysgration private constructor(
     private val rssi: Int,
@@ -57,6 +57,8 @@ internal data class RawSysgration private constructor(
     fun battery() = (manufacturerData[14].toInt() and 0xFF).toUShort()
 
     fun isAlarm() = manufacturerData[15] == PRESSURE_ALARM_BYTE
+    override fun diagnosticStatus(): String = "Sysgration alarm byte: " +
+        (manufacturerData[15].toInt() and 0xFF).toString(2).padStart(8, '0') + " (bit 7 first)"
 
     override fun asTyre() = Tyre.Located(
         now(),

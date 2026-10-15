@@ -5,6 +5,7 @@ plugins {
     `android-test`
     alias(libs.plugins.sqldelight)
     alias(libs.plugins.metro)
+    alias(libs.plugins.serialization)
 }
 
 android {
@@ -16,6 +17,7 @@ dependencies {
     implementation(project(":core:ui"))
     api(project(":core:database"))
     implementation(project(":data:unit"))
+    implementation(libs.kotlinx.serialization.json)
 
     testImplementation(project(":core:test"))
 
@@ -36,14 +38,14 @@ sqldelight {
                 .asFileTree
                 .matching { include("*.sqm") }
                 .files
-                .sortedBy { it.nameWithoutExtension }
+                .sortedBy { it.nameWithoutExtension.toInt() }
                 .map { it.nameWithoutExtension }
             val snapshots = schemaOutputDirectory
                 .get()
                 .asFileTree
                 .matching { include("*.db") }
                 .files
-                .sortedBy { it.nameWithoutExtension }
+                .sortedBy { it.nameWithoutExtension.toInt() }
                 .map { it.nameWithoutExtension }
             // Check that all migrations have a corresponding snapshot
             for (migration in migrations) {

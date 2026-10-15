@@ -17,6 +17,8 @@ public fun StringBuilder.appendLoc(
     withType: Boolean = true,
     capitalized: Boolean = false,
 ): StringBuilder = when (location) {
+    is Location.Auxiliary -> append((if (location == Location.Auxiliary.SPARE) "spare" else "single wheel")
+        .capitalizeIf(capitalized))
     is Wheel -> {
         append(
             when (location) {

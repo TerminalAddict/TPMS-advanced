@@ -28,6 +28,7 @@ import androidx.compose.material3.ShapeDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -54,6 +55,9 @@ import androidx.compose.ui.unit.Dp.Companion.Hairline
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.masselis.tpmsadvanced.core.ui.restartApp
 import com.masselis.tpmsadvanced.data.unit.model.PressureUnit
 import com.masselis.tpmsadvanced.data.unit.model.PressureUnit.BAR
@@ -108,6 +112,14 @@ private fun Content(
     modifier: Modifier = Modifier,
     viewModel: ListSensorViewModel = viewModel { ListSensorViewModel(vehicleUuid) }
 ) {
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(viewModel, lifecycle) {
+        val observer = LifecycleEventObserver { _, _ ->
+            viewModel.onVisibilityChanged(lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer); viewModel.onVisibilityChanged(false) }
+    }
     val state by viewModel.stateFlow.collectAsState()
     Box(
         contentAlignment = Alignment.Center,

@@ -37,6 +37,7 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import com.masselis.tpmsadvanced.feature.background.interfaces.MonitorService
 import com.masselis.tpmsadvanced.feature.background.interfaces.RidePreferences
 import com.masselis.tpmsadvanced.feature.background.interfaces.RideTrigger
+import com.masselis.tpmsadvanced.feature.background.interfaces.WaitingScanPower
 import java.util.Locale
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -55,11 +56,20 @@ public fun AutomaticRideSettings(vehicle: Vehicle) {
     val running by MonitorService.isRunning.collectAsState()
     val active by MonitorService.activeVehicle.collectAsState()
     val status by MonitorService.status.collectAsState()
+    val saving by WaitingScanPower.saving.collectAsState()
     val permissions = rememberMultiplePermissionsState(ridePermissions())
     val backgroundLocation = if (Build.VERSION.SDK_INT in Build.VERSION_CODES.Q..Build.VERSION_CODES.R)
         rememberPermissionState(Manifest.permission.ACCESS_BACKGROUND_LOCATION) else null
     Column {
         Text("Automatic ride monitoring", style = MaterialTheme.typography.titleMedium)
+        Row {
+            Text("Save battery while waiting")
+            Switch(saving, { WaitingScanPower.saving.value = it })
+        }
+        Text("Beacon scanning uses less power after 5 minutes without significant motion while the screen is off " +
+            "and the phone is not charging. Motion restores full rate. " +
+            "Active tyre monitoring always stays at full rate. " +
+            "Without a motion sensor, waiting uses balanced scanning. Scanning is never suspended by this setting.")
         Text("Watch for this vehicle while TyrePing is in the background. A notification stays visible until you stop.")
         if (!permissions.allPermissionsGranted) {
             Button(onClick = { permissions.launchMultiplePermissionRequest() }) {
@@ -100,8 +110,7 @@ public fun AutomaticRideSettings(vehicle: Vehicle) {
         if (running) {
             Text(status)
             TextButton(onClick = {
-                preferences.armedVehicle = null
-                context.stopService(MonitorService.intent(vehicle))
+                MonitorService.stop(context)
             }) { Text("Stop monitoring") }
         }
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
@@ -110,7 +119,7 @@ public fun AutomaticRideSettings(vehicle: Vehicle) {
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-private fun BackgroundLocationSetup(permission: PermissionState) {
+internal fun BackgroundLocationSetup(permission: PermissionState) {
     val context = LocalContext.current
     Text("Android 10 and 11 require Location access set to ‘Allow all the time’ for background Bluetooth " +
         "scanning. TyrePing does not record GPS location. " +
@@ -131,7 +140,7 @@ private fun startWatch(context: Context, vehicle: Vehicle): String? = try {
     "Bluetooth permission is missing. Grant it and try again."
 }
 
-private fun ridePermissions(): List<String> = buildList {
+internal fun ridePermissions(): List<String> = buildList {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         add(Manifest.permission.BLUETOOTH_SCAN)
         add(Manifest.permission.BLUETOOTH_CONNECT)

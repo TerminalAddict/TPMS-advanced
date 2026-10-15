@@ -18,6 +18,15 @@ internal class QrSensorParserTest {
     }
 
     @Test
+    fun `four sensor kits retain normal wheels for spare cars vans and utes`() {
+        val kit = QrSensorParser.parse("11AD8B&21563D&31A4F0&41A552")
+        listOf(Kind.CAR_WITH_SPARE, Kind.VAN, Kind.UTE).forEach { kind ->
+            assertEquals(Kind.CAR.locations, kit.forVehicle(kind).map { it.location }.toSet())
+        }
+        assertFailsWith<ConflictingLocations> { kit.forVehicle(Kind.MONOWHEEL) }
+    }
+
+    @Test
     fun `kit and single sensor IDs retain their different byte layouts`() {
         val kit = QrSensorParser.parse(" 11ad8b&21563d&31a4f0&41a552 ")
         assertEquals(-1951592192, kit.first().id)

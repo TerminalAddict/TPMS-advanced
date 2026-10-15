@@ -21,8 +21,11 @@ import dev.zacsweers.metro.SingleIn
 public interface TyreSubcomponentBindings {
 
     @Provides
+    @SingleIn(VehicleComponent.Scope::class)
+    @Suppress("LongParameterList") // DI entry points for each physical wheel position.
     private fun findTyreComponentUseCase(
         vehicle: Vehicle,
+        factory: TyreComponent.Factory,
         @WheelLocationQualifier(FRONT_LEFT) frontLeft: Lazy<TyreComponent>,
         @WheelLocationQualifier(FRONT_RIGHT) frontRight: Lazy<TyreComponent>,
         @WheelLocationQualifier(REAR_LEFT) rearLeft: Lazy<TyreComponent>,
@@ -40,7 +43,8 @@ public interface TyreSubcomponentBindings {
         front = front,
         rear = rear,
         left = left,
-        right = right
+        right = right,
+        additional = factory::build,
     )
 
     @Provides

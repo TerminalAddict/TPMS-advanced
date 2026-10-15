@@ -94,6 +94,16 @@ INSERT INTO Vehicle(uuid, kind, name, isFavourite) VALUES ("466b2e13-e33a-4adf-a
 insert:
 INSERT INTO Vehicle(uuid, kind, name, isFavourite) VALUES (?,?,?,?);
 
+restoreConfiguration:
+INSERT INTO Vehicle(uuid, kind, name, isFavourite, lowPressure, highPressure, separateFrontRearPressure,
+    rearLowPressure, rearHighPressure, lowTemp, normalTemp, highTemp)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(uuid) DO UPDATE SET kind=excluded.kind, name=excluded.name, isFavourite=excluded.isFavourite,
+    lowPressure=excluded.lowPressure, highPressure=excluded.highPressure,
+    separateFrontRearPressure=excluded.separateFrontRearPressure, rearLowPressure=excluded.rearLowPressure,
+    rearHighPressure=excluded.rearHighPressure, lowTemp=excluded.lowTemp, normalTemp=excluded.normalTemp,
+    highTemp=excluded.highTemp;
+
 selectLowPressureByVehicleId:
 SELECT lowPressure FROM Vehicle WHERE uuid = ?;
 

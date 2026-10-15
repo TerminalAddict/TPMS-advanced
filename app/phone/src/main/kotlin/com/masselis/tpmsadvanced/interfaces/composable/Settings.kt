@@ -19,9 +19,13 @@ import androidx.compose.ui.unit.dp
 import com.masselis.tpmsadvanced.BuildConfig
 import com.masselis.tpmsadvanced.core.ui.Separator
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.AutomaticRideSettings
+import com.masselis.tpmsadvanced.feature.background.interfaces.ui.AlertsSettings
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.LocalVehicleComponent
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.ReadingSettings
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.VehicleSettings
+import com.masselis.tpmsadvanced.feature.main.interfaces.composable.SensorManagementSettings
+import com.masselis.tpmsadvanced.feature.main.interfaces.composable.ReadingHistoryButton
+import com.masselis.tpmsadvanced.feature.main.interfaces.composable.DiagnosticsSettings
 import com.masselis.tpmsadvanced.feature.unit.interfaces.UnitsSettings
 import com.masselis.tpmsadvanced.interfaces.composable.SettingsTag.vehicle
 
@@ -36,6 +40,8 @@ internal fun Settings(
 ) {
     UnitsSettings()
     Separator()
+    AlertsSettings()
+    Separator()
     VehicleSettings(
         snackbarHostState = snackbarHostState,
         modifier = Modifier.testTag(vehicle)
@@ -43,7 +49,14 @@ internal fun Settings(
     Separator()
     AutomaticRideSettings(LocalVehicleComponent.current.vehicle)
     Separator()
+    SensorManagementSettings(LocalVehicleComponent.current.vehicle)
+    ReadingHistoryButton(LocalVehicleComponent.current.vehicle)
+    Separator()
     ReadingSettings()
+    Separator()
+    DiagnosticsSettings()
+    Separator()
+    BackupSettings()
     Separator()
     Box(Modifier.fillMaxWidth()) {
         Text(

@@ -2,6 +2,7 @@ package com.masselis.tpmsadvanced.feature.main.ioc.tyre
 
 import com.masselis.tpmsadvanced.data.unit.interfaces.UnitPreferences
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.CalibrationRepository
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorDatabase
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.TyreDatabase
@@ -68,6 +69,7 @@ public interface TyreBindings {
         sensorBindingUseCase: SensorBindingUseCase,
         @VehicleLifecycle scope: CoroutineScope,
         preferences: AppPreferences,
+        calibration: CalibrationRepository,
     ): ListenTyreWithDatabaseUseCase =
         if (demoOrBleScannerUseCase.isDemo.value)
             ListenTyreWithDatabaseUseCase.Wrapper(
@@ -82,6 +84,7 @@ public interface TyreBindings {
                 scope,
                 sensorBindingUseCase,
                 preferences.detectLeaks,
+                calibration.values,
             )
 
 
@@ -95,8 +98,9 @@ public interface TyreBindings {
     private fun listenTyreUseCase(uc: ListenBoundTyreUseCase): ListenTyreUseCase = uc
 
     @Provides
-    private fun tyreAtmosphereUseCase(listenTyreUseCase: ListenTyreUseCase, preferences: AppPreferences): TyreAtmosphereUseCase =
-        TyreAtmosphereUseCase(listenTyreUseCase, preferences.detectLeaks)
+    private fun tyreAtmosphereUseCase(
+        listenTyreUseCase: ListenTyreUseCase, preferences: AppPreferences, calibration: CalibrationRepository,
+    ): TyreAtmosphereUseCase = TyreAtmosphereUseCase(listenTyreUseCase, preferences.detectLeaks, calibration.values)
 
     @Provides
     private fun searchSensorToBindUseCase(

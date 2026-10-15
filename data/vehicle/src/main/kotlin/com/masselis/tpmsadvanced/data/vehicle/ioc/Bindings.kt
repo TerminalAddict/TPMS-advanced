@@ -13,6 +13,7 @@ import com.masselis.tpmsadvanced.data.vehicle.Sensor
 import com.masselis.tpmsadvanced.data.vehicle.Tyre
 import com.masselis.tpmsadvanced.data.vehicle.Vehicle
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorDatabase
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.ConfigurationBackups
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.TyreDatabase
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.VehicleDatabase
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.afterVersion3
@@ -78,6 +79,7 @@ public object Bindings {
         object : ColumnAdapter<Location, Long> {
 
             override fun encode(value: Location): Long = when (value) {
+                is Location.Auxiliary -> 30L + value.ordinal
                 is Location.Axle -> 0L + value.ordinal.toLong()
                 is Location.Side -> 10L + value.ordinal
                 is Location.Wheel -> 20L + value.ordinal
@@ -94,6 +96,8 @@ public object Bindings {
 
                     in 20..29 ->
                         Location.Wheel.entries.first { it.ordinal == ordinal }
+
+                    in 30..39 -> Location.Auxiliary.entries.first { it.ordinal == ordinal }
 
                     else -> error("Unable to parse this input $databaseValue")
                 }
@@ -172,5 +176,5 @@ public object Bindings {
             uShortAdapter,
             uuidAdapter,
         )
-    )
+    ).also { ConfigurationBackups.finishPending(it, appContext) }
 }

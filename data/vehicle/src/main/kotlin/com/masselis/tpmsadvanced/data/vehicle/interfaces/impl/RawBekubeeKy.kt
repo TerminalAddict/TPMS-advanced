@@ -37,6 +37,9 @@ internal data class RawBekubeeKy private constructor(
 
     fun temperature() = data[2].toFloat().celsius
 
+    override fun diagnosticStatus(): String = "Raw status (bit 7 first): " +
+        (data[0].toInt() and 0xFF).toString(2).padStart(8, '0')
+
     override fun asTyre() = Tyre.Unlocated(
         now(),
         rssi,

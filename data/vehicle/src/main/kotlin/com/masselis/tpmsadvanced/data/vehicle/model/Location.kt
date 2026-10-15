@@ -5,6 +5,9 @@ import kotlinx.parcelize.Parcelize
 
 public sealed interface Location : Parcelable {
     @Parcelize
+    public enum class Auxiliary : Location { SPARE, SINGLE }
+
+    @Parcelize
     public enum class Wheel : Location {
         FRONT_LEFT,
         FRONT_RIGHT,

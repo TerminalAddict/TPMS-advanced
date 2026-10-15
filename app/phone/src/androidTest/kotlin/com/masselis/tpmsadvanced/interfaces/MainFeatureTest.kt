@@ -67,9 +67,9 @@ internal class MainFeatureTest {
                 cancel()
             }
             tap {
-                addToFavorites()
+                assign(2)
             }
-            assertIsNotDisplayed()
+            assertIsDisplayed()
         }
         actionOverflow {
             settings {
@@ -139,10 +139,10 @@ internal class MainFeatureTest {
                 }
             }
         }
-        bindSensorButton(FRONT_LEFT) { assertIsNotDisplayed() }
-        bindSensorButton(FRONT_RIGHT) { assertIsNotDisplayed() }
-        bindSensorButton(REAR_LEFT) { assertIsNotDisplayed() }
-        bindSensorButton(REAR_RIGHT) { assertIsNotDisplayed() }
+        bindSensorButton(FRONT_LEFT) { assertIsDisplayed() }
+        bindSensorButton(FRONT_RIGHT) { assertIsDisplayed() }
+        bindSensorButton(REAR_LEFT) { assertIsDisplayed() }
+        bindSensorButton(REAR_RIGHT) { assertIsDisplayed() }
         actionOverflow {
             settings {
                 assertSeparateFrontRearSwitchIsDisplayed()

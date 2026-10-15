@@ -2,6 +2,10 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <queries>
+        <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
+    </queries>
     <!-- Android 10/11 require this for Bluetooth discovery while the app is in the background. -->
     <uses-permission
         android:name="android.permission.ACCESS_BACKGROUND_LOCATION"
@@ -18,6 +22,8 @@
         tools:ignore="UnusedAttribute" />
 
     <application>
+        <receiver android:name="com.masselis.tpmsadvanced.feature.background.interfaces.SilenceAlertsReceiver"
+            android:exported="false" />
         <receiver android:name="com.masselis.tpmsadvanced.feature.background.interfaces.DisableMonitorBroadcastReceiver" />
         <receiver android:name="com.masselis.tpmsadvanced.feature.background.interfaces.RestartAppBroadcastReceiver" />
 

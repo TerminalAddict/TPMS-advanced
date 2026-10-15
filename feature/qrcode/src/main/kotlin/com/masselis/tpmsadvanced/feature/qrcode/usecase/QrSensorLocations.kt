@@ -8,7 +8,8 @@ import com.masselis.tpmsadvanced.feature.qrcode.model.QrCodeSensors
 internal fun QrCodeSensors.forVehicle(kind: Kind): List<Sensor> = map { sensor ->
     val wheel = sensor.wheel
     Sensor(sensor.id, when (kind) {
-        Kind.CAR, Kind.DOUBLE_AXLE_TRAILER -> wheel
+        Kind.CAR, Kind.DOUBLE_AXLE_TRAILER, Kind.CAR_WITH_SPARE, Kind.VAN, Kind.UTE -> wheel
+        Kind.MONOWHEEL -> Location.Auxiliary.SINGLE
         Kind.MOTORCYCLE -> wheel.toAxle()
         Kind.SINGLE_AXLE_TRAILER -> wheel.toSide()
         Kind.TADPOLE_THREE_WHEELER -> if (wheel.toAxle() == Location.Axle.REAR) wheel.toAxle() else wheel

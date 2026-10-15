@@ -61,6 +61,8 @@ import com.masselis.tpmsadvanced.R
 import com.masselis.tpmsadvanced.core.ui.LocalHomeNavController
 import com.masselis.tpmsadvanced.core.ui.Spotlight
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.BackgroundIconButton
+import com.masselis.tpmsadvanced.feature.background.interfaces.ui.AudibleAlertsHost
+import com.masselis.tpmsadvanced.feature.background.interfaces.ui.SilenceAlertsButton
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.CurrentVehicle
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.CurrentVehicleDropdown
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.LocalVehicleComponent
@@ -96,6 +98,7 @@ internal fun VehicleHome(
     viewModel: VehicleHomeViewModel = viewModel { VehicleHomeViewModel() }
 ) {
     val navController = rememberNavController()
+    AudibleAlertsHost(vehicleComponent)
     CompositionLocalProvider(
         LocalVehicleComponent provides vehicleComponent,
         LocalHomeNavController provides navController
@@ -106,6 +109,7 @@ internal fun VehicleHome(
         var showWicarlinkSupportAlert by remember { mutableStateOf(false) }
         val snackbarHostState = remember { SnackbarHostState() }
         Scaffold(
+            bottomBar = { SilenceAlertsButton() },
             topBar = {
                 TopAppBar(
                     manualBackgroundButtonModifier = Modifier.onGloballyPositioned { coordinates ->

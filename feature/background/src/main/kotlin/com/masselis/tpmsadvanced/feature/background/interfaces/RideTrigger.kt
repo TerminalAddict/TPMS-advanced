@@ -19,7 +19,7 @@ internal class RidePreferences(context: Context) {
     private val preferences = context.getSharedPreferences("AUTOMATIC_RIDES", Context.MODE_PRIVATE)
     var armedVehicle: UUID?
         get() = preferences.getString("armed", null)?.let(UUID::fromString)
-        set(value) { preferences.edit { putString("armed", value?.toString()) } }
+        set(value) { preferences.edit(commit = true) { putString("armed", value?.toString()) } }
 
     fun read(vehicle: UUID): RideTrigger = RideTrigger(
         preferences.getString("$vehicle.address", "") ?: "",
@@ -45,7 +45,7 @@ internal class BeaconPresence(private val minRssi: Int) {
     private var confirmed = false
 
     fun received(now: Long, rssi: Int) {
-        if (rssi < minRssi) return
+        if (rssi !in MIN_VALID_RSSI..MAX_VALID_RSSI || rssi < minRssi) return
         if (last == null || now - checkNotNull(last) > TIMEOUT_MS) {
             first = now
             confirmed = false
@@ -57,6 +57,8 @@ internal class BeaconPresence(private val minRssi: Int) {
     fun isPresent(now: Long): Boolean = confirmed && last?.let { now - it <= TIMEOUT_MS } == true
 
     companion object {
+        private const val MIN_VALID_RSSI = -127
+        private const val MAX_VALID_RSSI = 126
         const val TIMEOUT_MS = 60_000L
         private const val CONFIRM_MS = 1_000L
     }

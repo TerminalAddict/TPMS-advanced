@@ -1,0 +1,4 @@
+CREATE TABLE ConfigurationRestore (
+    id INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),
+    payload TEXT NOT NULL
+);

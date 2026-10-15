@@ -137,6 +137,7 @@ public class VehicleRangesUseCase internal constructor(
             }
             @Suppress("MaxLineLength")
             when (location) {
+                is Location.Auxiliary -> if (location == Location.Auxiliary.SPARE) rearLow to rearHigh else low to high
                 is Location.Axle -> rangeFor(location)
                 is Location.Wheel -> rangeFor(location.toAxle())
                 is Location.Side -> error("Unable to find the right range to use when the location is a \"Side\" instance")

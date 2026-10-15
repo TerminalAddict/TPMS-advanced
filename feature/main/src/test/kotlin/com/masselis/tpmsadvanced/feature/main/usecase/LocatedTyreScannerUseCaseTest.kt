@@ -49,6 +49,18 @@ internal class LocatedTyreScannerUseCaseTest {
     }
 
     @Test
+    fun `spare and monowheel require explicit binding and ignore embedded wheel hints`() = runTest {
+        Location.Auxiliary.entries.forEach { location ->
+            bound.value = null
+            assertEquals(emptyList(), read(location, tyre(1), tyre(2, null)))
+            bound.value = Sensor(2, location)
+            val readings = read(location, tyre(1), tyre(2))
+            assertEquals(listOf(2), readings.map { it.sensorId })
+            assertEquals(listOf(location), readings.map { it.location })
+        }
+    }
+
+    @Test
     fun `explicit binding rejects another sensor advertising the same wheel`() = runTest {
         bound.value = Sensor(1, Location.Wheel.FRONT_LEFT)
         val result = read(Location.Wheel.FRONT_LEFT, tyre(2), tyre(1, null), tyre(3))

@@ -4,4 +4,5 @@ import com.masselis.tpmsadvanced.data.vehicle.model.ScannerRecord
 
 internal interface Raw {
     fun asTyre(): ScannerRecord
+    fun diagnosticStatus(): String = "Status bits not decoded; full advertisement preserved"
 }

@@ -13,6 +13,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -63,10 +64,14 @@ internal fun TyreStat(
         .TyreComponent(location)
         .let { viewModel(it.keyed()) { it.TyreStatsViewModel() } },
 ) {
-    val state by viewModel.stateFlow.collectAsState()
+    val state by viewModel.stateFlow.collectAsStateWithLifecycle()
     var enlarged by rememberSaveable(location) { mutableStateOf(false) }
-    ReadingValues(location, state, modifier.clickable(onClickLabel = "Enlarge readings") { enlarged = true },
+    var manage by rememberSaveable(location) { mutableStateOf(false) }
+    ReadingValues(location, state, modifier.clickable(onClickLabel = "Readings or assign sensor") {
+        if (state == State.NotDetected) manage = true else enlarged = true
+    },
         size = if (large) ReadingSize.CARD else ReadingSize.NORMAL)
+    if (manage) SensorManagementDialog(vehicleComponent.vehicle, location) { manage = false }
     if (enlarged) {
         LaunchedEffect(Unit) { delay(5.seconds); enlarged = false }
         Dialog(onDismissRequest = { enlarged = false },
@@ -150,6 +155,7 @@ internal fun ReadingValues(
     val alignment = remember(location, size) {
         if (size != ReadingSize.NORMAL) Alignment.CenterHorizontally else
         when (location) {
+            is Location.Auxiliary -> Alignment.CenterHorizontally
             is Location.Axle -> Alignment.Start
             is Location.Wheel -> when (location.toSide()) {
                 LEFT -> Alignment.End

@@ -31,18 +31,19 @@ internal class LocatedTyreScannerUseCase(
             when (tyreRecord) {
                 is Tyre.Located ->
                     when (currentLocation) {
+                        is Location.Auxiliary -> null // Additional slots require an explicit binding.
                         is Location.Wheel ->
                             tyreRecord.location
 
                         is Location.Axle -> when (tyreRecord.location) {
                             is Location.Wheel -> (tyreRecord.location as Location.Wheel).toAxle()
                             is Location.Axle -> tyreRecord.location
-                            is Location.Side -> null
+                            is Location.Side, is Location.Auxiliary -> null
                         }
 
                         is Location.Side -> when (tyreRecord.location) {
                             is Location.Wheel -> (tyreRecord.location as Location.Wheel).toSide()
-                            is Location.Axle -> null
+                            is Location.Axle, is Location.Auxiliary -> null
                             is Location.Side -> tyreRecord.location
                         }
                     }

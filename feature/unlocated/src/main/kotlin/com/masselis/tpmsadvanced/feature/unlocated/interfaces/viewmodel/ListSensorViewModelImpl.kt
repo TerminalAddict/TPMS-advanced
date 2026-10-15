@@ -52,6 +52,16 @@ internal class ListSensorViewModelImpl(
             ?: State.UnplugEverySensor
     )
     private var searchJob: Job? = null
+    private var searchRequested = false
+
+    override fun onVisibilityChanged(visible: Boolean) {
+        if (!visible) {
+            searchJob?.cancel()
+            searchJob = null
+        } else if (searchRequested && stateFlow.value !is State.Completed && searchJob == null) {
+            search()
+        }
+    }
 
     override fun acknowledgeAndClearBinding() {
         if (stateFlow.value !is State.AllWheelsAreAlreadyBound)
@@ -63,6 +73,7 @@ internal class ListSensorViewModelImpl(
     override fun acknowledgeSensorUnplugged() {
         if (stateFlow.value !is State.UnplugEverySensor)
             return
+        searchRequested = true
         search()
     }
 

@@ -57,4 +57,6 @@ internal interface ListSensorViewModel {
     fun acknowledgeAndClearBinding()
 
     fun acknowledgeSensorUnplugged()
+
+    fun onVisibilityChanged(visible: Boolean) = Unit
 }

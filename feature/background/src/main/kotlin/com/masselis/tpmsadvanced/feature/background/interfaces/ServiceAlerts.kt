@@ -15,6 +15,7 @@ internal fun Flow<List<Pair<Location, TyreAtmosphere>>>.alertStates(
 ) { readings, highTemp, lowPressure, highPressure, rearPressures ->
     readings.firstOrNull { (location, reading) ->
         val isRear = when (location) {
+            is Location.Auxiliary -> location == Location.Auxiliary.SPARE
             is Location.Axle -> location == Location.Axle.REAR
             is Location.Wheel -> location.toAxle() == Location.Axle.REAR
             is Location.Side -> false

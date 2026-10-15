@@ -1,0 +1,14 @@
+CREATE TABLE ConfigurationRestore (
+    id INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),
+    payload TEXT NOT NULL
+);
+
+stage:
+INSERT INTO ConfigurationRestore(id, payload) VALUES (1, ?)
+ON CONFLICT(id) DO UPDATE SET payload=excluded.payload;
+
+pending:
+SELECT payload FROM ConfigurationRestore WHERE id = 1;
+
+complete:
+DELETE FROM ConfigurationRestore WHERE id = 1;

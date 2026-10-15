@@ -1,0 +1,2 @@
+CREATE INDEX tyre_vehicle_time ON Tyre(vehicleId, timestamp);
+CREATE INDEX tyre_vehicle_sensor_time ON Tyre(vehicleId, id, timestamp);

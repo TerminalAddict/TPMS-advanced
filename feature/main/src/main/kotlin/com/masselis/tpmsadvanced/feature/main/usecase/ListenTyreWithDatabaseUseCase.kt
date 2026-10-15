@@ -5,12 +5,14 @@ import com.masselis.tpmsadvanced.core.common.materializeCompletion
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.TyreDatabase
 import com.masselis.tpmsadvanced.data.vehicle.model.Location
 import com.masselis.tpmsadvanced.data.vehicle.model.PressureLossTracker
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorCalibration
 import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -32,13 +34,18 @@ internal interface ListenTyreWithDatabaseUseCase : ListenTyreUseCase {
         scope: CoroutineScope,
         sensorBindingUseCase: SensorBindingUseCase = SensorBindingUseCase.NoOp,
         detectLeaks: StateFlow<Boolean> = MutableStateFlow(false),
+        calibrations: StateFlow<Map<Int, SensorCalibration>> = MutableStateFlow(emptyMap()),
     ) : ListenTyreWithDatabaseUseCase {
 
         private var latestReading: Tyre.Located? = null
-        private val flow = detectLeaks.onStart { latestReading = null }.flatMapLatest { enabled ->
+        private val flow = combine(detectLeaks, calibrations) { enabled, values -> enabled to values }
+            .onStart { latestReading = null }.flatMapLatest { (enabled, values) ->
             val tracker = PressureLossTracker()
             listenTyreUseCase.listen().map { tyre ->
-                tyre.copy(pressureLoss = if (enabled) tracker.next(tyre) else null)
+                val calibration = values[tyre.sensorId] ?: SensorCalibration()
+                val corrected = tyre.copy(pressure = calibration.pressure(tyre.pressure),
+                    temperature = calibration.temperature(tyre.temperature))
+                tyre.copy(pressureLoss = if (enabled) tracker.next(corrected) else null)
             }
                 .onEach { tyre ->
                     latestReading = tyre
@@ -59,7 +66,7 @@ internal interface ListenTyreWithDatabaseUseCase : ListenTyreUseCase {
             .onStart {
                 val bound = sensorBindingUseCase.boundSensor().value
                 (if (bound == null) tyreDatabase.latestByTyreLocationByVehicle(location, vehicle.uuid)
-                else tyreDatabase.latestBySensorByTyreLocationByVehicle(bound.id, location, vehicle.uuid))
+                else tyreDatabase.latestBySensorByVehicle(bound.id, location, vehicle.uuid))
                     .execute()
                     ?.takeIf { bound != null || !sensorBindingUseCase.isBound(it.sensorId) }
                     ?.also { emit(it) }

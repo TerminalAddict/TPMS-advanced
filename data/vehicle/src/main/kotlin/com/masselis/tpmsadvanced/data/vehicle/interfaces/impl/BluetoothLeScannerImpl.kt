@@ -27,6 +27,7 @@ import co.touchlab.kermit.Logger
 import com.masselis.tpmsadvanced.core.common.dematerializeCompletion
 import com.masselis.tpmsadvanced.core.common.materializeCompletion
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BleDiagnostics
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.Failure
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus
 import com.masselis.tpmsadvanced.data.vehicle.model.ScannerRecord
@@ -143,15 +144,20 @@ internal class BluetoothLeScannerImpl(
         .withMockAdvertisements(context, filters)
         .mapNotNull {
             logger.v("Sensor found during scan")
-            decodeAdvertisement(it)
-                ?: run {
+            val decoded = decodeAdvertisement(it)
+            val record = decoded?.asTyre()
+            if (BleDiagnostics.enabled.value) {
+                val address = try { it.device.address } catch (_: SecurityException) { "unavailable" }
+                BleDiagnostics.record(it.scanRecord?.bytes, it.rssi, address,
+                    decoded?.javaClass?.simpleName, record?.sensorId, decoded?.diagnosticStatus())
+            }
+            record ?: run {
                     logger.d("Sensor not parsed. Scan bytes: ${it.scanRecord?.bytes?.toHexString()}")
                     null
                 }
         }
         // Every accepted advertisement is a fresh reception, even when its measurements match.
         // Convert each one so persistence and "Last seen" receive the new timestamp.
-        .map { it.asTyre() }
         .onEach { logger.d("Sensor content: $it") }
 
     private val filters = SERVICES.map { ScanFilter.Builder().setServiceUuid(it).build() } +

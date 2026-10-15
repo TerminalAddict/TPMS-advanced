@@ -12,7 +12,8 @@ internal class VehicleKindLocationTest {
      */
     @Test
     fun toStringTest() {
-        val locations = Location.Wheel.entries + Location.Axle.entries + Location.Side.entries
+        val locations = Location.Wheel.entries + Location.Axle.entries + Location.Side.entries +
+            Location.Auxiliary.entries
         assertEquals(locations.size, locations.map { "$it" }.toSet().size)
     }
 }

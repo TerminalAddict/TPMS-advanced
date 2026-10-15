@@ -79,7 +79,11 @@ public data class Vehicle(
         DELTA_THREE_WHEELER(setOf(FRONT, REAR_LEFT, REAR_RIGHT)),
 
         /** Two axles, with front referring to the axle nearest the hitch. */
-        DOUBLE_AXLE_TRAILER(setOf(FRONT_LEFT, FRONT_RIGHT, REAR_LEFT, REAR_RIGHT));
+        DOUBLE_AXLE_TRAILER(setOf(FRONT_LEFT, FRONT_RIGHT, REAR_LEFT, REAR_RIGHT)),
+        CAR_WITH_SPARE(setOf(FRONT_LEFT, FRONT_RIGHT, REAR_LEFT, REAR_RIGHT, Location.Auxiliary.SPARE)),
+        MONOWHEEL(setOf(Location.Auxiliary.SINGLE)),
+        VAN(setOf(FRONT_LEFT, FRONT_RIGHT, REAR_LEFT, REAR_RIGHT)),
+        UTE(setOf(FRONT_LEFT, FRONT_RIGHT, REAR_LEFT, REAR_RIGHT));
 
     }
 }

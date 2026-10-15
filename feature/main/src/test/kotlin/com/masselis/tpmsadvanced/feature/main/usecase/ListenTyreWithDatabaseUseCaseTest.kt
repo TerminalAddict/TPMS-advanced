@@ -134,7 +134,7 @@ internal class ListenTyreWithDatabaseUseCaseTest {
             every { boundSensor() } returns MutableStateFlow(Sensor(1, FRONT_LEFT))
         }
         every { tyreDatabase.latestByTyreLocationByVehicle(location, any()) } returns mockkQueryOneOrNull(foreign)
-        every { tyreDatabase.latestBySensorByTyreLocationByVehicle(1, location, any()) } returns
+        every { tyreDatabase.latestBySensorByVehicle(1, location, any()) } returns
             mockkQueryOneOrNull(owned)
         test().listen().test { assertEquals(owned, awaitItem()) }
         coVerify(exactly = 0) { tyreDatabase.insert(any(), any()) }

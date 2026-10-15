@@ -55,7 +55,9 @@ internal fun Database.Companion.afterVersion3(
                 .value
                 .let { kind ->
                     when (kind) {
-                        CAR, DOUBLE_AXLE_TRAILER -> sensorLocation.asWheelLocation()
+                        CAR, DOUBLE_AXLE_TRAILER, Vehicle.Kind.CAR_WITH_SPARE, Vehicle.Kind.VAN,
+                        Vehicle.Kind.UTE -> sensorLocation.asWheelLocation()
+                        Vehicle.Kind.MONOWHEEL -> Location.Auxiliary.SINGLE
 
                         SINGLE_AXLE_TRAILER -> when (sensorLocation) {
                             FRONT_LEFT, REAR_LEFT -> Location.Side.LEFT

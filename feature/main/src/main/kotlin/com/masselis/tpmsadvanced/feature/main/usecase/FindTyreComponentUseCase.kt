@@ -23,12 +23,15 @@ internal class FindTyreComponentUseCase(
     private val rear: Lazy<TyreComponent>,
     private val left: Lazy<TyreComponent>,
     private val right: Lazy<TyreComponent>,
+    private val additional: (Location.Auxiliary) -> TyreComponent,
 ) : (Location) -> TyreComponent {
+    private val extra = mutableMapOf<Location.Auxiliary, TyreComponent>()
     override fun invoke(location: Location): TyreComponent {
         assert(vehicle.kind.locations.contains(location)) {
             "Cannot get a TyreComponent for the filled location $location according to the vehicle kind ${vehicle.kind}"
         }
         return when (location) {
+            is Location.Auxiliary -> lazy { extra.getOrPut(location) { additional(location) } }
             is Location.Wheel -> when (location) {
                 FRONT_LEFT -> frontLeft
                 FRONT_RIGHT -> frontRight

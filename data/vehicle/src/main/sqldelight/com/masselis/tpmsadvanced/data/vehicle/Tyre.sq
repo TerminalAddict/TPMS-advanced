@@ -21,6 +21,14 @@ CREATE TABLE Tyre(
     FOREIGN KEY(vehicleId) REFERENCES Vehicle(uuid) ON DELETE CASCADE
 );
 
+CREATE INDEX tyre_vehicle_time ON Tyre(vehicleId, timestamp);
+CREATE INDEX tyre_vehicle_sensor_time ON Tyre(vehicleId, id, timestamp);
+
+historyPage:
+SELECT id, timestamp, rssi, location, pressure, temperature, battery, isAlarm, batteryVoltage, batteryPercent
+FROM Tyre WHERE vehicleId = ? AND timestamp >= ? AND timestamp <= ?
+ORDER BY timestamp, rowid LIMIT ? OFFSET ?;
+
 insert:
 INSERT INTO Tyre (id, timestamp, rssi, location, pressure, temperature, battery, isAlarm, vehicleId, batteryVoltage, batteryPercent) VALUES (?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?);
 
@@ -28,6 +36,12 @@ latestByTyreLocationByVehicle:
 SELECT Tyre.id, Tyre.timestamp, Tyre.rssi, Tyre.location, Tyre.pressure, Tyre.temperature, Tyre.battery, Tyre.isAlarm, Tyre.batteryVoltage, Tyre.batteryPercent FROM Tyre
 INNER JOIN Vehicle ON Tyre.vehicleId = Vehicle.uuid
 WHERE location = ? AND Vehicle.uuid = ?
+ORDER BY timestamp DESC
+LIMIT 1;
+
+latestBySensorByVehicle:
+SELECT id, timestamp, rssi, location, pressure, temperature, battery, isAlarm, batteryVoltage, batteryPercent FROM Tyre
+WHERE id = ? AND vehicleId = ?
 ORDER BY timestamp DESC
 LIMIT 1;
 

@@ -196,6 +196,10 @@ private fun AddVehicle(
                         Text(
                             text = when (kind) {
                                 Vehicle.Kind.CAR -> "Car"
+                                Vehicle.Kind.CAR_WITH_SPARE -> "Car with spare wheel"
+                                Vehicle.Kind.MONOWHEEL -> "Monowheel"
+                                Vehicle.Kind.VAN -> "Van"
+                                Vehicle.Kind.UTE -> "Ute / pickup"
                                 Vehicle.Kind.SINGLE_AXLE_TRAILER -> "Single axle trailer"
                                 Vehicle.Kind.DOUBLE_AXLE_TRAILER -> "Double axle trailer"
                                 Vehicle.Kind.MOTORCYCLE -> "Motorcycle"

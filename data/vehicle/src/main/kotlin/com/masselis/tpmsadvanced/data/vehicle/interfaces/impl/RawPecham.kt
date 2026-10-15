@@ -20,6 +20,8 @@ internal data class RawPecham private constructor(
 ) : Raw {
 
     fun id() = macAddress.hashCode()
+    override fun diagnosticStatus(): String = "Pecham status byte: " +
+        (data[0].toInt() and 0xFF).toString(2).padStart(8, '0') + " (bit 7 first; raw bits)"
 
     fun pressure() = (((data[3].toInt() and 0xFF) shl 8) or (data[4].toInt() and 0xFF))
         .minus(145)

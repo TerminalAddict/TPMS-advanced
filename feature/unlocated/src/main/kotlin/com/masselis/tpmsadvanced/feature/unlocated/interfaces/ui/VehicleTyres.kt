@@ -2,6 +2,9 @@ package com.masselis.tpmsadvanced.feature.unlocated.interfaces.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Text
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -41,7 +44,15 @@ internal fun Vehicle(
 ) {
     val modifier = modifier.aspectRatio(.5f)
     when (kind) {
-        Vehicle.Kind.CAR, Vehicle.Kind.DOUBLE_AXLE_TRAILER -> Car(
+        Vehicle.Kind.CAR_WITH_SPARE, Vehicle.Kind.MONOWHEEL -> Column(modifier) {
+            kind.locations.forEach { location ->
+                TextButton(onClick = { onWheelTap(location) }, modifier = Modifier.testTag(tyreLocation(location))) {
+                    Text(location.toString().lowercase().replace('_', ' ') +
+                        if (states[location] == WheelState.Highlighted) " · selected" else "")
+                }
+            }
+        }
+        Vehicle.Kind.CAR, Vehicle.Kind.DOUBLE_AXLE_TRAILER, Vehicle.Kind.VAN, Vehicle.Kind.UTE -> Car(
             frontLeft = states.getValue(FRONT_LEFT),
             frontRight = states.getValue(FRONT_RIGHT),
             rearLeft = states.getValue(REAR_LEFT),

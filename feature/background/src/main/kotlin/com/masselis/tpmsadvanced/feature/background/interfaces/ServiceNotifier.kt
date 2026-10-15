@@ -36,6 +36,7 @@ import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
 import com.masselis.tpmsadvanced.feature.main.usecase.VehicleRangesUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
@@ -63,6 +64,7 @@ internal class ServiceNotifier(
     private val logger = Logger.withTag("ServiceNotifier")
 
     init {
+        scope.launch { audibleAlerts(vehicleComponent) }
         notificationManager.createNotificationChannel(
             NotificationChannelCompat
                 .Builder(channelNameWhenOk, IMPORTANCE_LOW)
@@ -177,6 +179,14 @@ internal class ServiceNotifier(
 
                     )
                     .setAutoCancel(false)
+                    .setSilent(true)
+                    .setOnlyAlertOnce(true)
+                    .apply {
+                        if (hasAlert) addAction(0, "Silence alerts for 10 min", getBroadcast(
+                            appContext, vehicle.uuid.hashCode(),
+                            Intent(appContext, SilenceAlertsReceiver::class.java), FLAG_IMMUTABLE
+                        ))
+                    }
                     .setOngoing(true)
                     .build()
             }

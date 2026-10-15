@@ -3,6 +3,7 @@ package com.masselis.tpmsadvanced.feature.background.interfaces
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
@@ -46,6 +47,7 @@ internal class MonitorService : LifecycleService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
+        stopRequested = false
         val automatic = intent?.getBooleanExtra(PARAM_AUTO, false) ?: (preferences.armedVehicle != null)
         if (!hasRidePermissions(automatic)) {
             preferences.armedVehicle = null
@@ -61,6 +63,7 @@ internal class MonitorService : LifecycleService() {
             watcher?.cancelAndJoin()
             stopReadings()
             val vehicle = resolveVehicle(intent)
+            if (stopRequested) return@launch
             if (vehicle == null) {
                 preferences.armedVehicle = null
                 stopSelf()
@@ -75,10 +78,12 @@ internal class MonitorService : LifecycleService() {
                     return@launch
                 }
                 preferences.armedVehicle = vehicle.uuid
+                MonitoringRecovery(this@MonitorService).started(vehicle, automatic = true)
                 showWaiting("${vehicle.name}: waiting for ride trigger")
                 watcher = watchRide(vehicle, trigger)
             } else {
                 preferences.armedVehicle = null
+                MonitoringRecovery(this@MonitorService).started(vehicle, automatic = false)
                 startReadings(vehicle)
             }
         }
@@ -120,6 +125,7 @@ internal class MonitorService : LifecycleService() {
     private fun startReadings(vehicle: Vehicle) {
         val job = SupervisorJob(lifecycleScope.coroutineContext[Job])
         monitoring = job
+        readingsActive.value = true
         ServiceComponent(vehicle, this, CoroutineScope(lifecycleScope.coroutineContext + job))
         status.value = "Monitoring ${vehicle.name}"
     }
@@ -127,6 +133,7 @@ internal class MonitorService : LifecycleService() {
     private suspend fun stopReadings() {
         monitoring?.cancelAndJoin()
         monitoring = null
+        readingsActive.value = false
     }
 
     private fun hasRidePermissions(automatic: Boolean): Boolean {
@@ -135,7 +142,7 @@ internal class MonitorService : LifecycleService() {
                 listOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
             automatic && Build.VERSION.SDK_INT in Build.VERSION_CODES.Q..Build.VERSION_CODES.R ->
                 listOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-            else -> emptyList()
+            else -> listOf(Manifest.permission.ACCESS_FINE_LOCATION)
         }
         return permissions.all {
             ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
@@ -177,17 +184,21 @@ internal class MonitorService : LifecycleService() {
     }
 
     override fun onDestroy() {
+        // Android may destroy the service without the user stopping it. Only explicit Stop clears the record.
         super.onDestroy()
         isRunningMutableStateFlow.value = false
         activeVehicle.value = null
         status.value = "Stopped"
+        readingsActive.value = false
     }
 
     companion object {
+        private var stopRequested = false
         private val isRunningMutableStateFlow = MutableStateFlow(false)
         val isRunning = isRunningMutableStateFlow.asStateFlow()
         val activeVehicle = MutableStateFlow<UUID?>(null)
         val status = MutableStateFlow("Stopped")
+        val readingsActive = MutableStateFlow(false)
         private const val PARAM_VEHICLE = "VEHICLE_PARAM"
         private const val PARAM_AUTO = "AUTOMATIC_RIDE"
         private const val CHANNEL = "AUTOMATIC_RIDES"
@@ -195,5 +206,12 @@ internal class MonitorService : LifecycleService() {
 
         fun intent(vehicle: Vehicle, automatic: Boolean = false) = Intent(appContext, MonitorService::class.java)
             .putExtra(PARAM_VEHICLE, vehicle).putExtra(PARAM_AUTO, automatic)
+
+        fun stop(context: Context) {
+            stopRequested = true
+            RidePreferences(context).armedVehicle = null
+            MonitoringSessionStore(context).clear()
+            context.stopService(Intent(context, MonitorService::class.java))
+        }
     }
 }

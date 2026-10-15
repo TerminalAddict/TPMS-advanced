@@ -11,9 +11,51 @@ import kotlinx.coroutines.withContext
 import java.util.UUID
 
 public class TyreDatabase internal constructor(
-    database: Database
+    private val database: Database
 ) {
     private val queries = database.tyreQueries
+
+    public suspend fun history(vehicleId: UUID, from: Double, until: Double): List<Tyre.Located> = withContext(IO) {
+        historyPage(vehicleId, from, until, HISTORY_LIMIT + 1L, 0)
+    }
+
+    private fun historyPage(vehicleId: UUID, from: Double, until: Double, limit: Long,
+        offset: Long): List<Tyre.Located> =
+        queries.historyPage(vehicleId, from, until, limit, offset) {
+                id, timestamp, rssi, location, pressure, temperature, battery, isAlarm, voltage, percent ->
+            Tyre.Located(timestamp, rssi, id, pressure, temperature, battery, isAlarm, location,
+                SensorBattery.fromStored(voltage, percent))
+        }.executeAsList()
+
+    public suspend fun exportHistory(
+        vehicle: com.masselis.tpmsadvanced.data.vehicle.model.Vehicle,
+        from: Double, until: Double, writer: java.io.Writer,
+    ): Unit = withContext(IO) {
+        writer.write("timestamp_utc,vehicle,wheel,sensor_id,pressure_kpa_raw,temperature_c_raw," +
+            "battery_volts,battery_percent,rssi,alarm\n")
+        database.transaction {
+            var offset = 0L
+            do {
+                val page = historyPage(vehicle.uuid, from, until, CSV_PAGE_SIZE, offset)
+                page.forEach { reading ->
+                    val date = java.time.Instant
+                        .ofEpochMilli((reading.timestamp * MILLIS_PER_SECOND).toLong()).toString()
+                    writer.write(listOf(date, com.masselis.tpmsadvanced.data.vehicle.model.csvCell(vehicle.name),
+                        reading.location.toString(), reading.sensorId.toUInt(), reading.pressure.kpa,
+                        reading.temperature.celsius, (reading.sensorBattery as? SensorBattery.Voltage)?.volts ?: "",
+                        (reading.sensorBattery as? SensorBattery.Percentage)?.percent ?: "", reading.rssi,
+                        reading.isAlarm).joinToString(",") + "\n")
+                }
+                offset += page.size
+            } while (page.size == CSV_PAGE_SIZE.toInt())
+        }
+    }
+
+    public companion object {
+        public const val HISTORY_LIMIT: Int = 20_000
+        private const val CSV_PAGE_SIZE = 1_000L
+        private const val MILLIS_PER_SECOND = 1_000L
+    }
 
     public suspend fun insert(tyre: Tyre.Located, vehicleId: UUID): Unit = withContext(IO) {
         queries.insert(
@@ -57,5 +99,14 @@ public class TyreDatabase internal constructor(
                 timestamp, rssi, id, pressure, temperature, battery, isAlarm, location,
                 SensorBattery.fromStored(voltage, percent)
             )
+        }.asOneOrNull()
+
+    /** Historical rows keep their original wheel; a moved sensor's cached value uses its new wheel. */
+    public fun latestBySensorByVehicle(sensorId: Int, location: Location,
+        vehicleId: UUID): QueryOneOrNull<Tyre.Located> =
+        queries.latestBySensorByVehicle(sensorId, vehicleId) {
+                id, timestamp, rssi, _, pressure, temperature, battery, isAlarm, voltage, percent ->
+            Tyre.Located(timestamp, rssi, id, pressure, temperature, battery, isAlarm, location,
+                SensorBattery.fromStored(voltage, percent))
         }.asOneOrNull()
 }

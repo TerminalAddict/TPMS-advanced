@@ -7,6 +7,7 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.provider.Settings.ACTION_BLUETOOTH_SETTINGS
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -22,6 +23,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,8 +68,10 @@ internal fun Tyre(
         .TyreComponent(location)
         .let { viewModel(it.keyed()) { it.TyreIconViewModel() } },
 ) {
-    val state by viewModel.stateFlow.collectAsState()
-    Tyre(state, snackbarHostState, modifier)
+    val state by viewModel.stateFlow.collectAsStateWithLifecycle()
+    var manage by remember { mutableStateOf(false) }
+    Tyre(state, snackbarHostState, modifier.clickable(onClickLabel = "Manage sensor") { manage = true })
+    if (manage) SensorManagementDialog(vehicleComponent.value.vehicle, location) { manage = false }
 }
 
 @Suppress("LongMethod", "CyclomaticComplexMethod", "MaxLineLength")

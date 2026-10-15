@@ -7,8 +7,7 @@ import com.masselis.tpmsadvanced.core.common.appContext
 
 internal class DisableMonitorBroadcastReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        RidePreferences(context).armedVehicle = null
-        appContext.stopService(Intent(appContext, MonitorService::class.java))
+        MonitorService.stop(context)
     }
 
     internal companion object {

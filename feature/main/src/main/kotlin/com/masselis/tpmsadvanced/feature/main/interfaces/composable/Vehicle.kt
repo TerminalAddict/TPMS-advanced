@@ -46,13 +46,14 @@ public fun Vehicle(
     KeepScreenOn()
     CompositionLocalProvider(LocalVehicleComponent provides component) {
         BoxWithConstraints(modifier) {
-            if (maxWidth > maxHeight) {
+            if (maxWidth > maxHeight || component.vehicle.kind in setOf(Kind.CAR_WITH_SPARE, Kind.MONOWHEEL)) {
                 LandscapeReadings(component.vehicle.kind.locations, Modifier.fillMaxSize(),
                     binding = { BindSensorButton(it) }) { location ->
                     TyreStat(location, Modifier.fillMaxWidth(), large = true)
                 }
             } else when (component.vehicle.kind) {
-                Kind.CAR -> Car(snackbarHostState, Modifier.fillMaxSize())
+                Kind.CAR, Kind.VAN, Kind.UTE -> Car(snackbarHostState, Modifier.fillMaxSize())
+                Kind.CAR_WITH_SPARE, Kind.MONOWHEEL -> Unit // Handled by labelled cards above.
                 Kind.SINGLE_AXLE_TRAILER -> SingleAxleTrailer(snackbarHostState, Modifier.fillMaxSize())
                 Kind.DOUBLE_AXLE_TRAILER -> DoubleAxleTrailer(snackbarHostState, Modifier.fillMaxSize())
                 Kind.MOTORCYCLE -> Motorcycle(snackbarHostState, Modifier.fillMaxSize())

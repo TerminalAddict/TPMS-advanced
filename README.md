@@ -41,12 +41,18 @@ TyrePing builds on the core capabilities of TPMS Advanced:
 - Low/high-pressure, temperature and low sensor battery alerts
 - Immediate alert updates when pressure or temperature thresholds change
 - Multiple vehicles with sensor ownership and cached readings kept with the correct tyre
-- Cars, motorcycles, single- and double-axle trailers, and three-wheelers
+- Cars (including a spare-wheel option), monowheels, vans, utes, motorcycles, single- and double-axle trailers, and three-wheelers
 - Pressure and temperature unit selection
 - QR-code sensor binding with invalid-code and conflicting-assignment checks
-- Favourite sensor binding
+- Tap-wheel sensor management, guided Bluetooth identification, and move/swap/rotate assignments
+- Individual sensor pressure and temperature calibration
+- Optional speech, tones and vibration with repeat intervals and temporary silence
+- Pressure/temperature history graphs, reading sessions and CSV export
+- Optional raw BLE capture with status bits and diagnostic export
+- Configuration backup and restore with validation and a safety copy
 - Latest recorded readings retained across app restarts
 - Manual background monitoring and automatic ride monitoring using a Bluetooth accessory or BLE beacon
+- Interrupted monitoring detection with Android exit reasons and a session restart prompt
 - Optional experimental pressure-loss warnings
 - Tap-to-enlarge readings and larger landscape cards
 - Simulated TPMS advertisements through ADB in debug builds
@@ -68,6 +74,35 @@ are unchanged. Scanning waits for Bluetooth to return and retries refused starts
 Missing permissions or unsupported scanning require user action; the monitor notification reports
 waiting, retrying and failure states.
 
+If a background monitoring session or automatic ride watch is interrupted, the next app launch
+offers **Restart monitoring** for the saved vehicle and mode, or **Keep stopped** to acknowledge it.
+The prompt also appears when returning to an already-open app after its service stops. Android 11+
+may provide a process exit reason and time; otherwise TyrePing reports that the cause is unknown.
+Reboots and app updates receive their own explanation. Android stop requests are reported separately
+from low-memory stops and crashes; an unknown cause is not assumed to be battery management.
+
+The recovery prompt includes permission setup and a link to Android's App settings. If interruptions
+recur, check the phone's background activity/battery restrictions there. Choose **Restart monitoring**
+to resume the session; a waiting automatic watch resumes its saved accessory/beacon trigger.
+Normal Stop actions do not produce a recovery warning, and a successfully restarted automatic service
+does not prompt. Detection uses a small saved session record without periodic wake-ups. It cannot
+notify you while Android has killed the app; reopen TyrePing to check. This applies to sessions started
+with the new build. See Android's [process exit information](https://developer.android.com/reference/android/app/ApplicationExitInfo).
+
+To test recovery without sensors, install the debug build, grant its permissions, choose a vehicle
+and start background monitoring. Then simulate an Android stop from your computer:
+
+```cmd
+adb shell am force-stop nz.paulwillard.tyreping.debug
+```
+
+Open **TyrePing Debug** again. The recovery prompt should identify the saved vehicle; choose
+**Restart monitoring** and check that its monitoring notification returns. Android 11+ should normally
+report a stop request for this test, rather than a low-memory or battery-management explanation.
+Repeat using the app or notification's normal Stop action: reopening should show no recovery prompt.
+This checks recovery without requiring a sensor broadcast; it does not simulate every manufacturer's
+background process management.
+
 An assigned sensor is kept with its saved tyre and vehicle. Cached readings remain visible when
 returning to a screen, while changing a binding clears the previous tyre's reading. A silent sensor
 does not prevent alerts from other tyres. Threshold changes re-evaluate existing readings immediately.
@@ -75,6 +110,95 @@ does not prevent alerts from other tyres. Threshold changes re-evaluate existing
 The current feature set is covered by automated tests, including local layout renders. Physical
 sensor reception, accessory/beacon detection, screen-off behaviour and real ride leak detection
 still need hardware validation. Leak detection is experimental and disabled by default.
+
+The v0.7.0 pre-release feature batch is tracked in [ROADMAP.md](ROADMAP.md). These additions are in
+testing; v0.6.0 remains the latest stable release. See [TESTING.md](TESTING.md) for installation
+and a checklist covering all ten additions, including simulated readings without physical sensors.
+
+### Audible and vibration alerts
+
+In Settings, choose **tones** or **speech**, enable vibration if wanted, and select normal and critical
+repeat intervals. Both are off initially. Alarm volume controls loudness; speech falls back to tones
+if a usable English speech engine is unavailable. Critical alerts use a more distinctive vibration:
+pressure at least 25% below the minimum or 20% above the maximum, or temperature at least 20°C above
+the high limit. Other out-of-range readings, possible leaks and low batteries use the normal interval.
+
+**Silence all alerts for 10 min** appears while an audible/vibration alert is active, and in its
+monitoring notification. Silence covers critical alerts too; the app offers **Resume alerts**.
+Visual warnings remain. Fresh packets do not reset repeat intervals. Clearing an alert or changing
+thresholds/calibration updates the alert immediately. Repeats require a reading received during the
+current monitoring session and stop after ten minutes without a fresh reading. Cached values alone
+do not start an audible alert after reopening the app. Phone audio routing, Do Not Disturb and
+screen-off delivery remain device tests.
+
+### Sensor assignment and calibration
+
+Tap a tyre outline or its link icon, or use **Manage sensors** in Settings. An empty reading also
+opens sensor management; tapping populated readings still magnifies them. Enter a sensor ID in
+decimal or with a `0x` hex prefix, or choose **Identify sensor via Bluetooth**. While parked, removing
+and refitting a sensor can highlight a candidate whose pressure changed by at least 15 kPa. Verify
+the ID and confirm the proposed assignment; the app never binds a nearby sensor automatically.
+
+The same dialog supports unassigning, moving into an empty wheel, swapping occupied wheels and
+rotating three or more assigned sensors. Rotation shows the exact mapping before Apply. Changes
+are transactional, retain sensor IDs, and preserve historical wheel positions. Cached readings
+follow swaps within the vehicle. A stale move/assignment confirmation asks you to review it again.
+
+**Calibrate sensor** applies `corrected = raw × multiplier + offset` independently to pressure and
+temperature. Pressure offsets use kPa and temperature offsets use °C, regardless of display units.
+Multipliers are limited to 0.5–1.5, pressure offsets to ±100 kPa and temperature offsets to ±30°C.
+Cancel discards edits; Reset changes the draft until Apply is tapped. Calibration follows the physical
+sensor across wheels and vehicles. Live displays and alerts use corrected values; raw recordings
+stay unchanged. Calibration changes also reset the experimental leak trend.
+
+### History and diagnostics
+
+Open **Pressure / temperature history and CSV** in Settings. Choose a 1-hour, 6-hour, 24-hour or
+7-day window, page backwards/forwards, or return to Latest. Select a reading session to narrow the
+graphs and CSV export. Sessions are inferred from gaps over 15 minutes; they are not GPS ride logs.
+Tap a graph near a point for its time, sensor and value. Graphs show raw kPa/°C with sensor colours,
+retain brief extrema when downsampling, and stop connecting readings across long gaps.
+
+Graphs are limited to 20,000 readings per window and explain when a shorter window is needed.
+CSV export includes every reading in the selected time range, with UTC timestamps, original wheel,
+sensor ID, raw pressure/temperature, battery, RSSI and alarm flag. Calibration does not rewrite history.
+
+**BLE diagnostics → Capture packets** saves advertisements matching the TPMS filters while scanning.
+Capture is opt-in and starts off after every process restart. The JSONL export includes full packet
+bytes, Bluetooth address, UTC timestamp, RSSI, decoder, sensor ID and available raw status bits.
+Unknown bits are not given guessed alarm meanings. Two rotating files retain about 4 MB; queue drops
+are reported. Export or clear the saved capture from the same section. It is separate from CSV history.
+
+### Additional vehicles and waiting power
+
+**Car with spare** provides five distinct positions; its spare needs an explicit sensor assignment.
+Four-sensor QR kits populate only its normal road wheels. **Monowheel** has one explicit sensor slot;
+multi-sensor kits are rejected. **Van** and **Ute** currently use the four-wheel car diagram and the
+same front/rear threshold controls. Car-with-spare and monowheel use labelled reading cards in portrait.
+The double axle trailer retains its existing schema image and four positions.
+
+**Save power while waiting for a BLE beacon** reduces scan duty while stationary, screen-off and
+not charging. Recent significant motion, an interactive screen or charging restores full scanning.
+Devices without a usable significant-motion sensor use balanced waiting scans. Active tyre monitoring
+always uses full scan duty; waiting scans are never suspended. Beacon presence survives scan-mode
+changes, and Android's unavailable-RSSI marker is ignored. Actual battery savings require phone testing.
+
+### Backup and restore
+
+Use **Backup and restore → Export configuration** to save vehicles, wheel assignments, thresholds,
+calibrations, units, alert preferences, leak detection, waiting-power settings and ride triggers as JSON.
+History and raw captures use their separate exports. Permissions, temporary silence and running
+monitoring sessions are not transferred.
+
+Import validates the format/version, vehicles, wheel compatibility, unique sensor ownership and
+setting ranges before showing a confirmation. Matching vehicle IDs and their bindings are replaced;
+other vehicles and recorded history remain. Imported sensor IDs may move from another vehicle.
+Global settings change, and a safety copy is saved before any database changes. Vehicles and a
+settings recovery journal commit together so reopening can finish an interrupted restore.
+
+Confirming stops background monitoring and restarts TyrePing. Re-arm automatic watches yourself.
+**Export safety copy from last restore** retrieves the previous configuration if needed. Restore is
+a merge, so importing that safety copy does not delete vehicles created since it was saved.
 
 ## TyrePing identity
 
@@ -280,19 +404,19 @@ Run the release script from PowerShell in the repository. It requires a clean `t
 that exactly matches `origin/tyreping`, an authenticated GitHub CLI, the Android toolchain, and
 the existing signing files in `secrets/`. Commit and push the intended changes first.
 
-For the next release after `0.4.0`, check the prerequisites without building or publishing:
+For example, to prepare the `0.7.0` pre-release, check the prerequisites without building or publishing:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tyreping-release.ps1 -Version 0.6.0 -DryRun
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tyreping-release.ps1 -Version 0.7.0 -DryRun
 ```
 
 Then build and publish the pre-release:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tyreping-release.ps1 -Version 0.6.0
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tyreping-release.ps1 -Version 0.7.0
 ```
 
-The script asks you to type `RELEASE v0.6.0`. It updates the version, runs unit tests, builds and
+The script asks you to type `RELEASE v0.7.0`. It updates the version, runs unit tests, builds and
 verifies the signed APK, commits the version change, creates a tag, pushes `tyreping` and the tag,
 and publishes a GitHub pre-release. Release notes come from commit subjects unless `-NotesFile`
 is supplied. Choose a new, unused version for subsequent releases.
@@ -300,8 +424,8 @@ is supplied. Choose a new, unused version for subsequent releases.
 With the repository at `D:\TyrePing`, the default output is:
 
 ```text
-D:\TyrePing-Releases\0.6.0\
-    TyrePing-v0.6.0.apk
+D:\TyrePing-Releases\0.7.0\
+    TyrePing-v0.7.0.apk
     SHA256SUMS.txt
     RELEASE_NOTES.md
 ```
@@ -309,7 +433,7 @@ D:\TyrePing-Releases\0.6.0\
 Install that APK with:
 
 ```powershell
-adb install -r D:\TyrePing-Releases\0.6.0\TyrePing-v0.6.0.apk
+adb install -r D:\TyrePing-Releases\0.7.0\TyrePing-v0.7.0.apk
 ```
 
 Add `-Stable` to publish a normal release. Use `-Resume` only when recovering a failed publication

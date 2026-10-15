@@ -9,10 +9,12 @@ import com.masselis.tpmsadvanced.core.database.QueryOneOrNull.Companion.asOneOrN
 import com.masselis.tpmsadvanced.data.vehicle.Database
 import com.masselis.tpmsadvanced.data.vehicle.model.Location
 import com.masselis.tpmsadvanced.data.vehicle.model.Sensor
+import com.masselis.tpmsadvanced.data.vehicle.model.moveSensors
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
+@Suppress("TooManyFunctions") // Typed operations for this database table.
 public class SensorDatabase internal constructor(
     private val database: Database,
 ) {
@@ -52,6 +54,41 @@ public class SensorDatabase internal constructor(
     public suspend fun deleteFromVehicle(vehicleId: UUID): Unit = withContext(IO) {
         queries.deleteByVehicle(vehicleId)
     }
+
+    public suspend fun unbind(vehicleId: UUID, location: Location): Unit = withContext(IO) {
+        queries.deleteByVehicleAndLocation(vehicleId, location)
+    }
+
+    /** Rejects a stale confirmation instead of replacing an assignment the user has not reviewed. */
+    public suspend fun assign(
+        sensor: Sensor,
+        vehicleId: UUID,
+        expectedTarget: Sensor?,
+        expectedSource: Pair<UUID, Sensor>?,
+    ): Unit = withContext(IO) {
+        database.transaction {
+            val target = queries.selectByVehicleAndLocation(vehicleId, sensor.location, mapper).executeAsOneOrNull()
+            val source = queries.selectById(sensor.id).executeAsOneOrNull()?.let {
+                it.vehicleId to Sensor(it.id, it.location)
+            }
+            require(target == expectedTarget && source == expectedSource) {
+                "Bindings changed. Review the assignment again."
+            }
+            upsertSync(sensor, vehicleId)
+        }
+    }
+
+    public suspend fun move(vehicleId: UUID, expected: List<Sensor>, moves: Map<Location, Location>): Unit =
+        withContext(IO) {
+            database.transaction {
+                val current = queries.selectListByVehicleId(vehicleId, mapper).executeAsList()
+                require(current.toSet() == expected.toSet()) { "Bindings changed. Review the move again." }
+                val kind = vehicleQueries.selectByUuid(vehicleId).executeAsOne().kind
+                val updated = moveSensors(current, kind.locations, moves)
+                queries.deleteByVehicle(vehicleId)
+                updated.forEach { upsertSync(it, vehicleId) }
+            }
+        }
 
     public suspend fun deleteFromVehicleAndUpsert(
         sensors: List<Sensor>,

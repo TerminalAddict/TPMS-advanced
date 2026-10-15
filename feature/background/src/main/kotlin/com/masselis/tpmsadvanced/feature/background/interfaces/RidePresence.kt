@@ -100,11 +100,13 @@ private fun Context.accessoryPresence(adapter: BluetoothAdapter, address: String
 }
 
 @SuppressLint("MissingPermission")
-private fun beaconPresence(adapter: BluetoothAdapter, trigger: RideTrigger): Flow<RidePresence> = callbackFlow {
-    send(RidePresence(false, "Waiting for beacon"))
+@OptIn(ExperimentalCoroutinesApi::class)
+private fun Context.beaconPresence(adapter: BluetoothAdapter, trigger: RideTrigger): Flow<RidePresence> {
+    val presence = BeaconPresence(trigger.minRssi)
+    return waitingScanModes().flatMapLatest { mode -> callbackFlow {
+    send(RidePresence(presence.isPresent(SystemClock.elapsedRealtime()), "Watching for beacon"))
     delay(5.seconds) // Space starts even across Bluetooth toggles.
     val scanner = checkNotNull(adapter.bluetoothLeScanner) { "Bluetooth scanner unavailable" }
-    val presence = BeaconPresence(trigger.minRssi)
     val callback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             presence.received(SystemClock.elapsedRealtime(), result.rssi)
@@ -116,7 +118,7 @@ private fun beaconPresence(adapter: BluetoothAdapter, trigger: RideTrigger): Flo
     }
     try {
         scanner.startScan(listOf(ScanFilter.Builder().setDeviceAddress(trigger.address).build()),
-            ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_POWER).build(), callback)
+            ScanSettings.Builder().setScanMode(mode).build(), callback)
         launch {
             while (true) {
                 val present = presence.isPresent(SystemClock.elapsedRealtime())
@@ -126,13 +128,14 @@ private fun beaconPresence(adapter: BluetoothAdapter, trigger: RideTrigger): Flo
         }
         awaitClose()
     } finally { runCatching { scanner.stopScan(callback) } }
-}.retryWhen { cause, _ ->
+} }.retryWhen { cause, _ ->
     if ((cause is BeaconScanFailure && cause.code != ScanCallback.SCAN_FAILED_FEATURE_UNSUPPORTED) ||
         cause is IllegalStateException) {
         emit(RidePresence(false, "Beacon scan refused; retrying"))
         delay(30.seconds)
         true
     } else false
+}
 }
 
 private class BeaconScanFailure(val code: Int) : Exception("Beacon scan failed: $code")
