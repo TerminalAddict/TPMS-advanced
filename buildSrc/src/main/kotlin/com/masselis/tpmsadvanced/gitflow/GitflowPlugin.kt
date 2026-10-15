@@ -64,12 +64,20 @@ public class GitflowPlugin : Plugin<Project> {
             fromBranch = developRef
             toBranch = releaseRef
         }
+        // Gradle resolves every ValueSource parameter before obtain() runs. Select the count
+        // here so ordinary builds never query a release ref that may not exist.
+        val zeroBuildCount = providers.provider { 0 }
+        val versionReleaseBuildCount = currentBranchName.zip(ext.releaseBranch) { branch, release ->
+            branch == release
+        }.flatMap { onReleaseBranch ->
+            if (onReleaseBranch) releaseBuildCount else zeroBuildCount
+        }
         versionCode.set(providers.from(VersionCode::class) {
             version = ext.version
             currentBranch = currentBranchName
             releaseBranch = ext.releaseBranch
             mainBranch = ext.mainBranch
-            this.releaseBuildCount = releaseBuildCount
+            this.releaseBuildCount = versionReleaseBuildCount
         })
         currentReleaseTag.set(versionCode.flatMap { vc ->
             if (currentBranchName.get() == ext.releaseBranch.get())
