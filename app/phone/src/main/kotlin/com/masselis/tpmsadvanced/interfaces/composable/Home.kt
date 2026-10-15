@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -64,6 +65,8 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.ui.BackgroundIcon
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.AudibleAlertsHost
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.SilenceAlertsButton
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.CurrentVehicle
+import com.masselis.tpmsadvanced.feature.main.interfaces.composable.ReadyToRide
+import com.masselis.tpmsadvanced.feature.background.interfaces.ui.RideToolsHost
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.CurrentVehicleDropdown
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.LocalVehicleComponent
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
@@ -99,6 +102,7 @@ internal fun VehicleHome(
 ) {
     val navController = rememberNavController()
     AudibleAlertsHost(vehicleComponent)
+    RideToolsHost()
     CompositionLocalProvider(
         LocalVehicleComponent provides vehicleComponent,
         LocalHomeNavController provides navController
@@ -135,10 +139,13 @@ internal fun VehicleHome(
                         .padding(paddingValues)
                         .fillMaxSize()
                     composable(route = "${Path.Home(vehicleComponent.vehicle.uuid)}") {
+                        Column(modifier) {
+                        ReadyToRide(vehicleComponent.vehicle)
                         CurrentVehicle(
                             snackbarHostState = snackbarHostState,
-                            modifier = modifier
+                            modifier = Modifier.weight(1f).fillMaxWidth()
                         )
+                        }
                     }
                     composable("${Path.Settings(vehicleComponent.vehicle.uuid)}") {
                         Settings(

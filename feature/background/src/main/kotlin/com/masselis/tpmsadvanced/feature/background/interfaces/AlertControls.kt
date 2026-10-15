@@ -26,6 +26,7 @@ internal object AlertControls {
     }
     val silencedUntil = MutableStateFlow(0L)
     val active = MutableStateFlow(false)
+    val fleetActive = MutableStateFlow(false)
     fun silence() { silencedUntil.value = SystemClock.elapsedRealtime() + SILENCE_MS }
     private const val SILENCE_MS = 600_000L
 }

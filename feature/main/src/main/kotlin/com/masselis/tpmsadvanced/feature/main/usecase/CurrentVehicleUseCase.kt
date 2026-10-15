@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import java.util.UUID
 import java.util.UUID.randomUUID
+import kotlinx.coroutines.sync.withLock
 
 @Suppress("UnnecessaryOptInAnnotation")
 @OptIn(DelicateCoroutinesApi::class, ExperimentalForInheritanceCoroutinesApi::class)
@@ -31,12 +32,16 @@ public class CurrentVehicleUseCase internal constructor(
         }
 ) : StateFlow<VehicleComponent> by stateFlow {
 
-    public suspend fun setAsCurrent(uuid: UUID): Unit =
-        database.setIsCurrent(uuid, true)
+    public suspend fun setAsCurrent(uuid: UUID) {
+        if (database.selectAll().execute().none { it.uuid == uuid }) return
+        RideRuntime.manualSelection.value = true
+        RideRuntime.selectionMutex.withLock { database.setIsCurrent(uuid, true) }
+    }
 
-    public suspend fun setAsCurrent(vehicle: Vehicle): Unit =
-        database.setIsCurrent(vehicle.uuid, true)
+    public suspend fun setAsCurrent(vehicle: Vehicle): Unit = setAsCurrent(vehicle.uuid)
 
-    internal suspend fun insertAsCurrent(carName: String, kind: Vehicle.Kind) = database
-        .insert(randomUUID(), kind, carName, true)
+    internal suspend fun insertAsCurrent(carName: String, kind: Vehicle.Kind) {
+        RideRuntime.manualSelection.value = true
+        RideRuntime.selectionMutex.withLock { database.insert(randomUUID(), kind, carName, true) }
+    }
 }

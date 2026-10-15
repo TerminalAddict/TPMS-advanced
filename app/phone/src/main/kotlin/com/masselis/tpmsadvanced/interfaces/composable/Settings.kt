@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.dp
 import com.masselis.tpmsadvanced.BuildConfig
 import com.masselis.tpmsadvanced.core.ui.Separator
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.AutomaticRideSettings
+import com.masselis.tpmsadvanced.feature.background.interfaces.ui.AutomaticSelectionSettings
+import com.masselis.tpmsadvanced.feature.main.interfaces.composable.RideToolsSettings
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.AlertsSettings
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.LocalVehicleComponent
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.ReadingSettings
@@ -48,6 +50,10 @@ internal fun Settings(
     )
     Separator()
     AutomaticRideSettings(LocalVehicleComponent.current.vehicle)
+    AutomaticSelectionSettings(LocalVehicleComponent.current.vehicle)
+    Separator()
+    RideToolsSettings(LocalVehicleComponent.current.vehicle)
+    NfcVehicleSettings(LocalVehicleComponent.current.vehicle)
     Separator()
     SensorManagementSettings(LocalVehicleComponent.current.vehicle)
     ReadingHistoryButton(LocalVehicleComponent.current.vehicle)

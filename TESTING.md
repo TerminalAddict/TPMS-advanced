@@ -1,5 +1,89 @@
 # Combined feature-batch testing
 
+## Features 21–29 — v0.9.0 pre-release and debug checkpoint
+
+Developed on `codex/ride-readiness-and-vehicle-tools`, based on v0.8.0 (`eed5160`).
+The signed v0.9.0 pre-release contains this batch and updates existing signed TyrePing installations.
+Its APK is `D:\TyrePing-Releases\0.9.0\TyrePing-v0.9.0.apk`.
+The separate debug checkpoint below retains version **0.8.0 / 800000** and includes ADB simulation,
+which is excluded from signed release builds. The same physical test checklist applies to both.
+
+Install the dedicated build when your phone is connected:
+
+```powershell
+adb install -r "D:\TyrePing-Releases\debug\TyrePing-features-21-29-debug.apk"
+```
+
+This updates **TyrePing Debug** (`nz.paulwillard.tyreping.debug`) and can coexist with signed TyrePing.
+Use configuration backup/restore to copy vehicles and bindings between the two apps if needed.
+No physical phone, NFC tag or TPMS sensor was used for the automated checks.
+
+1. **Ready-to-Ride:** open a vehicle with expected wheels. Tap the dashboard card. Unseen wheels
+   must say not received; fresh normal readings should say recently healthy. After two minutes without
+   packets, readings must become sleeping/stale, with an advancing Last seen age. Low battery and
+   out-of-range pressure/temperature must show warnings. Turn Bluetooth off and check the scan warning.
+2. **Missing sensors:** choose one minute in Settings → Ride tools, start background monitoring,
+   send a packet, then stop sending. Expect a missing warning after roughly one minute (up to five
+   seconds of refresh delay). A sensor not seen this ride must never produce a missing warning.
+   Send another packet to clear it. Parked must clear missing warnings; after resuming, send fresh
+   packets before testing again. Bluetooth off/on must provide a new timeout rather than an immediate
+   missing warning. Check notification, optional sound/vibration and Silence for 10 min.
+3. **Pressure profiles:** save Solo and Towing with different limits, including separate rear limits
+   on a double-axle trailer. Apply each without sending another packet and check existing alerts update.
+   Edit limits manually and confirm “active limits” disappears when no preset matches. Reject invalid
+   ranges and duplicate names. Restart and confirm presets remain.
+4. **Automatic vehicle selection:** configure a different paired accessory for two vehicles and
+   enable the switch. Connect each accessory and check the display changes. Select manually, then
+   reconnect: it must hold your choice until Resume automatic selection. Connect both accessories:
+   it must avoid guessing. Test with the app open and with the monitoring service running. Android
+   can report already-connected audio accessories; other accessory types may need reconnection.
+5. **Multi-vehicle indicators:** explicitly assign sensors to two vehicles. View one and send a bad
+   reading from the other. Expect a warning beside the selector arrow and that vehicle's menu entry.
+   Good readings clear it; silent alert settings must not hide visual warnings. Check the saved
+   readings after switching vehicles and after restarting.
+6. **NFC:** Settings → NFC vehicle switching → Write vehicle tag. Use a spare writable tag because
+   its previous NDEF contents will be replaced. After success, move it away and tap again. Test cold
+   launch, switching in an already-open app, a trailer tag, cancellation, a read-only tag and NFC off.
+   NFC must hold the selection against automatic selection and must not start monitoring by itself.
+   A deleted-vehicle tag should show an explanation. Malformed links must leave the app usable.
+7. **Widget:** add TyrePing readings from the launcher. Check pressures/temperatures use selected
+   units, vehicle switching, monitoring status, warning data, and the live age counters. Stop the app:
+   the widget must remain visibly a snapshot and must not pretend to receive fresh readings. Resize
+   it, rotate the launcher where supported, and test a car with a spare wheel and large font settings.
+8. **Maintenance:** record an installation, tread/pressure check and replacement for different wheels.
+   Restart and verify history. Set a reminder due today, grant notifications, and check dashboard/widget
+   and notification (background delivery can be delayed). Test a mileage-only reminder by updating
+   its current odometer. Reschedule/disable it and check the due state clears. Test deleting a record.
+9. **Spoken diagnostics:** enable the switch, turn up alarm volume, and test manual monitoring,
+   automatic accessory waiting/activation, Bluetooth off/on and screen locked. Announcements should
+   explain changes rather than repeat on each broadcast. Disable or silence them during speech.
+10. **Backup:** export profiles, maintenance history/reminders and accessory mappings, modify them,
+    restore and restart as instructed. Verify all return. A conflicting accessory on a retained vehicle
+    must reject restore before changing database configuration. Existing pre-feature backups still import.
+
+Sensor-free replay (Bluetooth on, app open or monitoring active; assign ID 5647616 to a wheel first):
+
+```powershell
+adb shell am broadcast -a nz.paulwillard.tyreping.debug.MOCK_ADVERTISEMENT -p nz.paulwillard.tyreping.debug --es brand bekubee --es address AA:BB:CC:DD:EE:01 --ei id 5647616 --ef kpa 230 --ef celsius 25
+adb shell am broadcast -a nz.paulwillard.tyreping.debug.MOCK_ADVERTISEMENT -p nz.paulwillard.tyreping.debug --es brand bekubee --es address AA:BB:CC:DD:EE:01 --ei id 5647616 --ef kpa 120 --ef celsius 95
+# Exercise a vehicle link with your real saved vehicle UUID:
+adb shell am start -a android.intent.action.VIEW -d "tpmsadvanced://vehicle/YOUR-VEHICLE-UUID" -p nz.paulwillard.tyreping.debug
+```
+
+Local verification: 175 JVM tests passed (data 72, main 57, background 44, phone 2), including
+freshness/session boundaries, Bluetooth recovery grace, preset validation, manual selection policy,
+strict URI parsing, maintenance due rules and backup merge conflicts. Database instrumentation tests
+for atomic profile application and packet ownership/deduplication compile; execution awaits a device.
+Pressure-profile, maintenance and five-wheel widget renders were inspected. Final build/check details
+are recorded in `PROJECT_CONTEXT.md` and the ignored `build/ride-tools-*.log` logs.
+
+Verified APK: version 0.8.0 / 800000, minSDK28/targetSDK37, 88,321,841 bytes, APK v2 signature valid.
+SHA-256: `05980c1b0cefd9ea5e02d6de3b680efe08e1a2e02e433f9c856b6e920118cfd0`.
+Android lint: zero errors and 19 existing icon/resource warnings. Data/background/phone Detekt pass;
+main retains its 13 existing MagicNumber findings in AlertSlider/TyreStat, with no new findings.
+
+The earlier release checkpoints below describe their own builds, not this APK.
+
 ## BLE discovery — v0.8.0 pre-release
 
 Developed on `codex/ble-sensor-discovery`. The signed [v0.8.0 pre-release](https://github.com/TerminalAddict/TyrePing/releases/tag/v0.8.0)

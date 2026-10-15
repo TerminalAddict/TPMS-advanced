@@ -36,6 +36,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
+import com.masselis.tpmsadvanced.feature.main.usecase.FleetHealth
+import com.masselis.tpmsadvanced.feature.main.usecase.RideRuntime
+import com.masselis.tpmsadvanced.core.common.now
 
 /** One foreground service owns both waiting and monitoring, so detection needs no background launch. */
 @SuppressLint("MissingPermission")
@@ -44,6 +47,13 @@ internal class MonitorService : LifecycleService() {
     private var monitoring: Job? = null
     private var configuration: Job? = null
     private val preferences by lazy { RidePreferences(this) }
+
+    override fun onCreate() {
+        super.onCreate()
+        lifecycleScope.launch { FleetHealth.observe() }
+        lifecycleScope.launch { AutomaticVehicleSelection.watch() }
+        lifecycleScope.launch { spokenMonitoringDiagnostics() }
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
@@ -107,7 +117,7 @@ internal class MonitorService : LifecycleService() {
         try {
             ridePresence(trigger).withDisconnectGrace { monitoring != null }.collect { presence ->
                 if (presence.present) {
-                    if (monitoring == null) startReadings(vehicle)
+                    if (monitoring == null) startReadings(vehicle, presence.message)
                 } else {
                     showWaiting("${vehicle.name}: ${presence.message}")
                     stopReadings()
@@ -122,18 +132,25 @@ internal class MonitorService : LifecycleService() {
         }
     }
 
-    private fun startReadings(vehicle: Vehicle) {
+    private fun startReadings(vehicle: Vehicle, reason: String = "manual start") {
         val job = SupervisorJob(lifecycleScope.coroutineContext[Job])
         monitoring = job
         readingsActive.value = true
-        ServiceComponent(vehicle, this, CoroutineScope(lifecycleScope.coroutineContext + job))
-        status.value = "Monitoring ${vehicle.name}"
+        RideRuntime.started.value = now()
+        RideRuntime.parked.value = false
+        val scope = CoroutineScope(lifecycleScope.coroutineContext + job)
+        scope.launch { FleetHealth.captureReadings() }
+        scope.launch { fleetWarnings() }
+        ServiceComponent(vehicle, this, scope)
+        status.value = "Monitoring ${vehicle.name}: $reason"
+        RideRuntime.status.value = status.value
     }
 
     private suspend fun stopReadings() {
         monitoring?.cancelAndJoin()
         monitoring = null
         readingsActive.value = false
+        RideRuntime.started.value = null
     }
 
     private fun hasRidePermissions(automatic: Boolean): Boolean {
@@ -151,6 +168,7 @@ internal class MonitorService : LifecycleService() {
 
     private fun showWaiting(message: String) {
         status.value = message
+        RideRuntime.status.value = message
         val manager = NotificationManagerCompat.from(this)
         manager.createNotificationChannel(
             NotificationChannelCompat.Builder(CHANNEL, NotificationManagerCompat.IMPORTANCE_LOW)
@@ -189,6 +207,8 @@ internal class MonitorService : LifecycleService() {
         isRunningMutableStateFlow.value = false
         activeVehicle.value = null
         status.value = "Stopped"
+        RideRuntime.status.value = "Monitoring stopped"
+        RideRuntime.started.value = null
         readingsActive.value = false
     }
 

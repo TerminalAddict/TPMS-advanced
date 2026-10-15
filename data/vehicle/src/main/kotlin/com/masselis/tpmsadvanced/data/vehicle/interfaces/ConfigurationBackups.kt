@@ -14,6 +14,7 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Pressure
 import com.masselis.tpmsadvanced.data.vehicle.model.Temperature
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import com.masselis.tpmsadvanced.data.vehicle.model.backupLocation
+import com.masselis.tpmsadvanced.data.vehicle.model.mergeRideTools
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -60,13 +61,18 @@ public class ConfigurationBackups internal constructor(private val database: Dat
             }.toMap(),
             preferences("DISCOVERED_SENSORS").all.mapNotNull { (key, value) ->
                 key.toIntOrNull()?.let { id -> (value as? String)?.let { id to it } }
-            }.toMap()
+            }.toMap(),
+            RideToolsStore(context).read().let { data -> data.copy(vehicles = data.vehicles.filterKeys { id ->
+                vehicles.any { it.uuid == id }
+            }) }
         )).also { it.validate() }
     }
 
     /** Merges vehicles by UUID, replaces their bindings and preserves history and unrelated vehicles. */
     public suspend fun restore(backup: ConfigurationBackup): Unit = withContext(Dispatchers.IO) {
         backup.validate()
+        // Reject conflicts with retained vehicles before committing the database/restore journal.
+        mergeRideTools(RideToolsStore(context).read(), backup.settings.rideTools, backup.vehicles.map { it.uuid })
         val previous = snapshot()
         val recoveryFile = File(context.filesDir, "configuration-before-restore.json")
         val safetyCopy = AtomicFile(recoveryFile)
@@ -107,6 +113,9 @@ public class ConfigurationBackups internal constructor(private val database: Dat
     }
 
     private fun applySettings(settings: BackupSettings, vehicles: List<String>, sensorIds: List<Int>) {
+        RideToolsStore(context).update { previous ->
+            mergeRideTools(previous, settings.rideTools, vehicles)
+        }
         edit("UNITS") { putString("PRESSURE", settings.pressureUnit); putString("TEMPERATURE",
             settings.temperatureUnit) }
         edit("APP") { putBoolean("DETECT_LEAKS", settings.detectLeaks) }

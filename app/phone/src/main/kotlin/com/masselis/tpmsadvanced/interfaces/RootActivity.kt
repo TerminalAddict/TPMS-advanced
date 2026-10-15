@@ -9,7 +9,16 @@ import com.masselis.tpmsadvanced.core.ui.LocalKeepScreenOnCounter
 import com.masselis.tpmsadvanced.core.ui.ScreenOnCounter
 import com.masselis.tpmsadvanced.interfaces.composable.Main
 import com.masselis.tpmsadvanced.interfaces.composable.TpmsAdvancedTheme
-import java.util.UUID
+import android.content.Intent
+import com.masselis.tpmsadvanced.data.vehicle.model.vehicleLinkId
+import androidx.lifecycle.lifecycleScope
+import com.masselis.tpmsadvanced.core.common.appGraph
+import com.masselis.tpmsadvanced.data.vehicle.ioc.VehicleToolsDependencies
+import com.masselis.tpmsadvanced.feature.main.usecase.RideRuntime
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.withLock
 
 public class RootActivity : AppCompatActivity() {
 
@@ -20,20 +29,36 @@ public class RootActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val expectedVehicle = intent
-            ?.data
-            ?.pathSegments
-            ?.first()
-            ?.let { UUID.fromString(it) }
-            ?.takeIf { hasConsumedIntent.not() }
-            ?.also { hasConsumedIntent = true }
+        if (!hasConsumedIntent) {
+            selectVehicle(intent)
+            hasConsumedIntent = true
+        }
 
         setContent {
             CompositionLocalProvider(LocalKeepScreenOnCounter provides counter) {
                 TpmsAdvancedTheme {
-                    Main(expectedVehicle)
+                    Main(null)
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        selectVehicle(intent)
+    }
+
+    private fun selectVehicle(intent: Intent?) {
+        vehicleLinkId(intent?.dataString)?.let { id -> lifecycleScope.launch {
+            val database = (appGraph as VehicleToolsDependencies).toolsVehicles
+            val exists = withContext(Dispatchers.IO) { database.selectAll().execute().any { it.uuid == id } }
+            if (exists) {
+                RideRuntime.manualSelection.value = true
+                RideRuntime.selectionMutex.withLock { database.setIsCurrent(id, true) }
+            } else android.widget.Toast.makeText(this@RootActivity,
+                "This vehicle is not in TyrePing. Restore its backup first.",
+                android.widget.Toast.LENGTH_LONG).show()
+        } }
     }
 }

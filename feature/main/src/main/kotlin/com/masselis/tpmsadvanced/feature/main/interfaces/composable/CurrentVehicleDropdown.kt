@@ -82,6 +82,7 @@ private fun CurrentVehicleDropdown(
     val vehicles = viewModel.stateFlow.collectAsState().value as? State.Vehicles ?: return
     var expanded by remember { mutableStateOf(false) }
     var askNewVehicle by remember { mutableStateOf(false) }
+    val health by com.masselis.tpmsadvanced.feature.main.usecase.FleetHealth.values.collectAsState()
     ExposedDropdownMenuBox(
         expanded = expanded,
         onExpandedChange = { expanded = !expanded },
@@ -92,6 +93,8 @@ private fun CurrentVehicleDropdown(
             modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
         ) {
             Text(text = vehicles.current.name, Modifier.testTag(currentVehicleTest))
+            if (health.any { it.warning && it.vehicle.uuid != vehicles.current.uuid }) Text(" ⚠",
+                color = androidx.compose.material3.MaterialTheme.colorScheme.error)
             ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
         }
         VehicleListDropdownMenu(
@@ -99,7 +102,8 @@ private fun CurrentVehicleDropdown(
             vehicleList = vehicles.list.toImmutableList(),
             onDismissRequest = { expanded = false },
             onNewCurrent = { viewModel.setCurrent(it) },
-            onAskNewVehicle = { askNewVehicle = true }
+            onAskNewVehicle = { askNewVehicle = true },
+            warnings = health.filter { it.warning }.map { it.vehicle.uuid }.toSet()
         )
     }
     if (askNewVehicle)
@@ -118,6 +122,7 @@ private fun ExposedDropdownMenuBoxScope.VehicleListDropdownMenu(
     onNewCurrent: (Vehicle) -> Unit,
     onAskNewVehicle: () -> Unit,
     modifier: Modifier = Modifier,
+    warnings: Set<UUID> = emptySet(),
 ) {
     DropdownMenu(
         expanded = isExpanded,
@@ -126,7 +131,8 @@ private fun ExposedDropdownMenuBoxScope.VehicleListDropdownMenu(
     ) {
         vehicleList.forEach { vehicle ->
             DropdownMenuItem(
-                text = { Text(vehicle.name, Modifier.weight(1f)) },
+                text = { Text(vehicle.name + if (vehicle.uuid in warnings) " · ⚠ Warning" else "",
+                    Modifier.weight(1f)) },
                 contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                 onClick = {
                     onNewCurrent(vehicle)

@@ -58,6 +58,22 @@ public class TyreDatabase internal constructor(
     }
 
     public suspend fun insert(tyre: Tyre.Located, vehicleId: UUID): Unit = withContext(IO) {
+        database.transaction { insertSync(tyre, vehicleId) }
+    }
+
+    /** Resolve ownership and store the packet in the same transaction as a concurrent rebind. */
+    public suspend fun insertBound(tyre: Tyre): Unit = withContext(IO) {
+        database.transaction {
+            database.sensorQueries.selectById(tyre.sensorId).executeAsOneOrNull()?.let { binding ->
+                insertSync(Tyre.Located(tyre, binding.location), binding.vehicleId)
+            }
+        }
+    }
+
+    private fun insertSync(tyre: Tyre.Located, vehicleId: UUID) {
+        // Foreground screens and fleet monitoring share packets; store each broadcast once per vehicle.
+        val last = queries.latestBySensorByVehicle(tyre.sensorId, vehicleId).executeAsOneOrNull()
+        if (last?.timestamp == tyre.timestamp) return
         queries.insert(
             tyre.sensorId,
             tyre.timestamp,

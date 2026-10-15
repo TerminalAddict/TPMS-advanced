@@ -21,6 +21,12 @@ public interface VehicleToolsDependencies {
     public val toolsScanner: BluetoothLeScanner
     public val toolsCalibration: CalibrationRepository
     public val toolsBackups: ConfigurationBackups
+    public val rideTools: com.masselis.tpmsadvanced.data.vehicle.interfaces.RideToolsStore
+
+    @Provides
+    @SingleIn(AppScope::class)
+    private fun rideTools(context: Context): com.masselis.tpmsadvanced.data.vehicle.interfaces.RideToolsStore =
+        com.masselis.tpmsadvanced.data.vehicle.interfaces.RideToolsStore(context)
 
     @Provides
     private fun backups(database: Database, context: Context): ConfigurationBackups = ConfigurationBackups(database,

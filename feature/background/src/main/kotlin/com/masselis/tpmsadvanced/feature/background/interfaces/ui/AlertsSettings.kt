@@ -74,6 +74,7 @@ public fun AudibleAlertsHost(component: VehicleComponent) {
 @Composable
 public fun SilenceAlertsButton() {
     val active by AlertControls.active.collectAsState()
+    val fleetActive by AlertControls.fleetActive.collectAsState()
     val until by AlertControls.silencedUntil.collectAsState()
     var remaining by remember { mutableLongStateOf(0L) }
     LaunchedEffect(until) {
@@ -82,7 +83,7 @@ public fun SilenceAlertsButton() {
             delay(1_000)
         } while (remaining > 0)
     }
-    if (active || remaining > 0) TextButton(onClick = {
+    if (active || fleetActive || remaining > 0) TextButton(onClick = {
         if (remaining > 0) AlertControls.silencedUntil.value = 0 else AlertControls.silence()
     }) { Text(if (remaining > 0) "Resume alerts (${remaining / 1_000}s muted)" else "Silence all alerts for 10 min") }
 }

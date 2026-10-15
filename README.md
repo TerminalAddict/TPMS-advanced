@@ -41,6 +41,14 @@ TyrePing builds on the core capabilities of TPMS Advanced:
 - Low/high-pressure, temperature and low sensor battery alerts
 - Immediate alert updates when pressure or temperature thresholds change
 - Multiple vehicles with sensor ownership and cached readings kept with the correct tyre
+- Ready-to-Ride dashboard with fresh, sleeping, unseen and missing sensor states
+- Configurable missing-sensor warnings during a ride, with a parked pause and Bluetooth recovery grace
+- Named per-vehicle pressure profiles, applied to front/rear limits together
+- Bluetooth accessory vehicle selection with a manual override, plus NFC vehicle tags
+- Warning indicators for other vehicles in the vehicle selector
+- Home-screen widget with pressures, temperatures, monitoring snapshot and advancing age counters
+- Per-wheel tyre maintenance history with date/mileage reminders
+- Optional spoken monitoring diagnostics including Bluetooth and scan-failure reasons
 - Cars (including a spare-wheel option), monowheels, vans, utes, motorcycles, single- and double-axle trailers, and three-wheelers
 - Pressure and temperature unit selection
 - QR-code sensor binding with invalid-code and conflicting-assignment checks
@@ -67,6 +75,57 @@ For a double axle trailer, choose **Double axle trailer** when adding a vehicle.
 the front: assign front-left/right sensors to the axle nearest the hitch and rear-left/right
 sensors to the other axle. Four-sensor QR kits retain all four positions. Separate front/rear
 pressure limits are available for the two axles.
+
+### Ride tools (features 21–29)
+
+The **Ready-to-Ride** card above the vehicle drawing opens a per-wheel checklist. A sensor is
+recently healthy only when its calibrated reading is no more than two minutes old, within the
+vehicle's limits, and has no reported battery warning. Sleeping or unseen sensors are unconfirmed.
+Unknown battery level remains labelled “not reported”. Background monitoring and scan problems
+are shown separately. This is a pre-ride information check, not a guarantee of tyre condition.
+
+Under **Settings → Ride tools**, save pressure profiles such as Solo, Pillion, Touring or Towing.
+Profiles store your chosen alert limits; TyrePing does not invent recommended tyre pressures.
+The editor uses explicitly labelled kPa values. Applying a profile updates all front/rear pressure
+limits in one database transaction and refreshes existing alerts. Matching profiles show “active limits”.
+
+Missing-sensor warnings default to ten minutes and can be set from one to sixty minutes or disabled.
+Only sensors that actually report during the current monitoring session are enrolled. Automatic
+waiting and the dashboard's **Parked** switch suppress missing warnings. Resume from Parked requires
+new readings; a radio interruption gets a full timeout after scanning resumes. Pressure and temperature
+alerts continue while parked. Other explicitly bound vehicles share the existing scanner and appear
+with a warning in the selector if their recent readings are outside limits.
+
+**Automatic vehicle selection** maps one paired Bluetooth accessory address to each vehicle.
+It runs while the app is visible or the monitoring service is running. One connected accessory selects
+its vehicle; multiple matches leave the choice to you. Manual and NFC selections hold until **Resume
+automatic vehicle selection** is tapped (or the app process restarts). Selection changes the displayed
+vehicle; the separate automatic ride settings control the monitoring trigger.
+
+**NFC vehicle switching** writes the current vehicle's link to a writable NDEF tag, replacing its
+contents after you choose Write. Tap the tag with the phone unlocked to select that vehicle, including
+a trailer. Tags refer to the vehicle UUID, so restore its backup when moving to another phone.
+Malformed or deleted-vehicle links cannot crash or create vehicles. NFC hardware is optional.
+
+Add **TyrePing readings** from Android's home-screen widget picker. It follows the selected vehicle,
+shows the latest cached readings and monitoring snapshot, and has age counters that advance even
+when TyrePing's process stops. Updates occur while the app/service is active and on Android's periodic
+widget refresh; a widget by itself does not start scanning. Resize it for long names or larger text.
+
+**Tyre maintenance and reminders** records installation/replacement dates, tyre brand/model,
+odometer kilometres, tread millimetres, pressure checks and notes per wheel. A reminder becomes due
+on its date **or** entered mileage. Mileage is entered manually. Due reminders appear on the dashboard
+and widget and can notify once per scheduled reminder; daily background checks may be delayed by Android.
+Set the next date/mileage after completing the work. Profiles, records, reminders, accessory mappings
+and ride-tool settings are included in configuration backups.
+
+**Speak monitoring diagnostics** is off by default. When enabled it announces activation/waiting,
+the trigger reason, Bluetooth loss and scan recovery problems using alarm volume. Tyre alerts have
+priority, and the existing silence control also mutes diagnostics.
+
+Design references: [vehicle indicators, PR #82](https://github.com/aveshev/persistent-tpms/pull/82),
+[status announcements, PR #53](https://github.com/aveshev/persistent-tpms/pull/53), and
+[spoken reasons, PR #58](https://github.com/aveshev/persistent-tpms/pull/58).
 
 ### Monitoring reliability
 

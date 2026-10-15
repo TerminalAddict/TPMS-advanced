@@ -23,6 +23,22 @@ public class VehicleDatabase internal constructor(database: Database) {
 
     private val queries = database.vehicleQueries
 
+    /** All four limits change in one transaction; alert observers never see half a profile. */
+    public suspend fun applyProfile(id: UUID,
+        profile: com.masselis.tpmsadvanced.data.vehicle.model.PressureProfile): Unit =
+        withContext(IO) {
+            profile.validate()
+            queries.transaction {
+                val vehicle = queries.selectByUuid(id, mapper).executeAsOne()
+                require(!profile.separateRear || vehicle.kind != Vehicle.Kind.SINGLE_AXLE_TRAILER)
+                queries.updateLowPressure(Pressure(profile.low), id)
+                queries.updateHighPressure(Pressure(profile.high), id)
+                queries.updateRearLowPressure(Pressure(profile.rearLow), id)
+                queries.updateRearHighPressure(Pressure(profile.rearHigh), id)
+                queries.updateSeparateFrontRearPressure(profile.separateRear, id)
+            }
+        }
+
     init {
         queries.deleteIsDeleting()
     }
@@ -161,7 +177,8 @@ public class VehicleDatabase internal constructor(database: Database) {
             Pressure,
             Instant?,
         ) -> Vehicle =
-            { uuid, name, _, lowPressure, highPressure, lowTemp, normalTemp, highTemp, kind, _, separateFrontRearPressure, rearLowPressure, rearHighPressure, lastFrontRearTyreSwap ->
+            { uuid, name, _, lowPressure, highPressure, lowTemp, normalTemp, highTemp, kind, _,
+                separateFrontRearPressure, rearLowPressure, rearHighPressure, lastFrontRearTyreSwap ->
                 Vehicle(
                     uuid,
                     kind,

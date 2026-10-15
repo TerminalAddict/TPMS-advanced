@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" tools:ignore="Overdraw"
+    android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="12dp" android:background="#182421">
+    <TextView android:id="@+id/widget_title" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="@string/app_name" android:textColor="#FFFFFF" android:textSize="18sp" android:textStyle="bold" />
+    <TextView android:id="@+id/widget_status" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:textColor="#C5DDD3" android:textSize="12sp" />
+    <TextView android:id="@+id/widget_readings" android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1" android:textColor="#FFFFFF" android:textSize="14sp" />
+    <TextView android:id="@+id/widget_warning" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:textColor="#FFCE80" android:textSize="12sp" />
+    <Chronometer android:id="@+id/widget_reading_age" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:textColor="#C5DDD3" android:textSize="11sp" />
+    <Chronometer android:id="@+id/widget_age" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:textColor="#C5DDD3" android:textSize="11sp" />
+</LinearLayout>

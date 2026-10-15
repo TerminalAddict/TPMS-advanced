@@ -24,9 +24,18 @@ public data class ConfigurationBackup(
         val sensors = vehicles.flatMap { it.sensors }.map { it.id }
         require(sensors.distinct().size == sensors.size) { "A sensor is assigned to multiple wheels" }
         settings.validate(vehicles.map { it.uuid }.toSet())
+        vehicles.forEach { vehicle -> settings.rideTools.vehicles[vehicle.uuid]?.let { tools ->
+            require(tools.records.all { backupLocation(it.wheel) in Vehicle.Kind.valueOf(vehicle.kind).locations })
+            require(vehicle.kind != Vehicle.Kind.SINGLE_AXLE_TRAILER.name || tools.profiles.none { it.separateRear })
+        } }
     }
 
-    public fun encode(): String { validate(); return codec.encodeToString(this) }
+    public fun encode(): String {
+        validate()
+        return codec.encodeToString(this).also {
+            require(it.length <= MAX_CHARACTERS) { "Backup exceeds the 2 MB limit" }
+        }
+    }
 
     public companion object {
         public const val MAX_CHARACTERS: Int = 2_000_000
@@ -82,8 +91,11 @@ public data class BackupSettings(
     val calibrations: Map<Int, BackupCalibration> = emptyMap(),
     val triggers: Map<String, BackupRideTrigger> = emptyMap(),
     val discoveredAddresses: Map<Int, String> = emptyMap(),
+    val rideTools: RideToolsData = RideToolsData(),
 ) {
     public fun validate(vehicles: Set<String>) {
+        rideTools.validate()
+        require(rideTools.vehicles.keys.all { it in vehicles })
         com.masselis.tpmsadvanced.data.unit.model.PressureUnit.valueOf(pressureUnit)
         com.masselis.tpmsadvanced.data.unit.model.TemperatureUnit.valueOf(temperatureUnit)
         require(alertSound in listOf("NONE", "TONES", "SPEECH"))
