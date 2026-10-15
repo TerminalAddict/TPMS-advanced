@@ -81,6 +81,7 @@ public data class BackupSettings(
     val criticalSeconds: Int = 20, val saveWaitingPower: Boolean = true,
     val calibrations: Map<Int, BackupCalibration> = emptyMap(),
     val triggers: Map<String, BackupRideTrigger> = emptyMap(),
+    val discoveredAddresses: Map<Int, String> = emptyMap(),
 ) {
     public fun validate(vehicles: Set<String>) {
         com.masselis.tpmsadvanced.data.unit.model.PressureUnit.valueOf(pressureUnit)
@@ -89,6 +90,9 @@ public data class BackupSettings(
         require(repeatSeconds in 30..600 && criticalSeconds in 10..120)
         require(calibrations.size <= 1_000 && calibrations.values.all { it.calibration().isValid() })
         require(triggers.keys.all { it in vehicles })
+        require(discoveredAddresses.size <= 1_000 && discoveredAddresses.values.all {
+            it.matches(Regex("([0-9A-F]{2}:){5}[0-9A-F]{2}"))
+        }) { "Invalid discovered sensor addresses" }
         triggers.values.forEach {
             require(it.address.matches(Regex("([0-9A-F]{2}:){5}[0-9A-F]{2}")) && it.rssi in -100..-30)
         }

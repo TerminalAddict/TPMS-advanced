@@ -1,5 +1,64 @@
 # Combined feature-batch testing
 
+## BLE discovery — v0.8.0 pre-release
+
+Developed on `codex/ble-sensor-discovery`. The signed [v0.8.0 pre-release](https://github.com/TerminalAddict/TyrePing/releases/tag/v0.8.0)
+adds discovery and updates existing signed TyrePing installations. The pre-packaging debug checkpoint
+still reports **0.7.0 / 700000** and uses the separate TyrePing Debug app. Install its
+`app\phone\build\outputs\apk\debug\phone-debug.apk` with the command below for ADB simulation.
+The signed pre-release contains discovery but does not include the debug simulation receiver.
+
+For the MRD-TY-T05-04 kit:
+
+1. Open **Settings → Sensors → Discover sensors**, confirm the vehicle and select a wheel.
+2. Close HRTPMS. Start scanning with one sensor off its valve. Keep this page visible.
+3. Tap **Mark, then fit sensor** and install that sensor while parked. Inspect new/changed devices.
+   F.W/R.W and A/B markings are not unique sensor IDs. Nearby non-TPMS devices also appear.
+4. If recognised, compare raw kPa/psi and °C against the actual tyre/HRTPMS readings. Record the
+   decoder name, sensor ID and Bluetooth address. Confirm assignment only for the matching sensor.
+5. Repeat for all four sensors, checking that each has a distinct, stable ID. Verify replacement and
+   cross-vehicle warnings if an ID is already bound. Cancel must preserve current bindings.
+6. Close discovery, restart TyrePing with HRTPMS closed, and check that each assigned sensor updates
+   its wheel and Last seen normally. Also test while a monitoring service is running before discovery;
+   it must continue receiving readings and resume normal scanning after discovery closes.
+7. If unknown or implausible, use **Export device**. Capture before fitting, just after fitting,
+   and settled on the tyre, noting reference pressure/temperature separately. Attach the JSONL files
+   for decoder investigation. Unknown packets must never show an Assign action.
+8. Toggle Bluetooth off/on, deny/regrant Nearby devices, lock the screen, leave the page, and let a
+   scan reach two minutes. Discovery must stop/recover as indicated without leaving a second scan.
+9. Export all packets, cancel the file picker, export again, and open the JSONL. Check full bytes,
+   manufacturer IDs/data, service UUIDs/data, timestamps and decoder results. Export before closing;
+   the page retains only 200 devices and 1,000 recent packets in memory.
+10. Back up assigned sensors, restore, restart, and check that discovery address filters survive.
+
+Debug replay checks (with discovery scanning and Bluetooth on):
+
+```powershell
+# Unnamed, unknown advertisement; visible/exportable, never assignable.
+adb shell am broadcast -a nz.paulwillard.tyreping.debug.MOCK_ADVERTISEMENT -p nz.paulwillard.tyreping.debug --es address AA:BB:CC:DD:EE:02 --es bytes 06ff3412010203
+# Known Bekubee format: first off-valve, then mark installation in the app, then a pressure change.
+adb shell am broadcast -a nz.paulwillard.tyreping.debug.MOCK_ADVERTISEMENT -p nz.paulwillard.tyreping.debug --es address AA:BB:CC:DD:EE:01 --es brand bekubee --ei id 5647616 --ef kpa 0 --ef celsius 20
+adb shell am broadcast -a nz.paulwillard.tyreping.debug.MOCK_ADVERTISEMENT -p nz.paulwillard.tyreping.debug --es address AA:BB:CC:DD:EE:01 --es brand bekubee --ei id 5647616 --ef kpa 230 --ef celsius 20
+```
+
+These synthetic packets exercise the existing decoder and UI; they do **not** establish that the
+photographed T05-04 kit uses that protocol. Real sensor, radio and phone validation remain pending.
+
+Local verification for this discovery build (15 October 2026):
+
+- 155 JVM tests passed: data vehicle 61, main 53, background 41; no failures or skipped tests.
+- Debug APK build and release-variant Kotlin compilation passed. APK v2 signature verified.
+- Discovery page, recognised-packet and unnamed/unknown-packet layout renders were inspected.
+- Data vehicle lint has no issues; main lint has zero errors/warnings and one existing hint.
+  Data Detekt passes; main retains exactly 13 pre-existing MagicNumber findings in AlertSlider/TyreStat.
+- Debug package: `nz.paulwillard.tyreping.debug`, version `0.7.0` / `700000`, minSDK 28, targetSDK 37.
+  APK size: 86,679,891 bytes. SHA-256:
+  `958c1d6a2272a9b13f1c3a60200983f2a35eef4f2d97e0ed3a31fdad23e89dd0`.
+- Logs: `build/discovery-final-tests-build.log`, `build/discovery-quality.log`,
+  `build/discovery-release-compile.log`. No phone commands were run.
+
+## Original v0.7.0 feature batch
+
 Feature batch: **v0.7.0 pre-release**, developed on `codex/monitoring-shutdown-recovery` from v0.6.0.
 The original debug checkpoint described below reports version 0.6.0 (600000) and contains all ten
 roadmap items. The signed pre-release uses version 0.7.0 and the normal TyrePing application ID.

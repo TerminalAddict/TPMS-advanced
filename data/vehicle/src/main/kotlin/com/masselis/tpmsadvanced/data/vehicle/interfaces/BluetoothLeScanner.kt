@@ -1,6 +1,7 @@
 package com.masselis.tpmsadvanced.data.vehicle.interfaces
 
 import com.masselis.tpmsadvanced.data.vehicle.model.ScannerRecord
+import com.masselis.tpmsadvanced.data.vehicle.model.BleAdvertisement
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.time.TimeMark
@@ -28,6 +29,12 @@ public interface BluetoothLeScanner {
 
     public fun highDutyScan(): Flow<ScannerRecord>
     public fun normalScan(): Flow<ScannerRecord>
+
+    /** Temporarily widens the shared radio scan. The caller must stop collecting when its screen is hidden. */
+    public fun discoverAdvertisements(): Flow<BleAdvertisement> = kotlinx.coroutines.flow.emptyFlow()
+
+    /** Keeps an explicitly assigned sensor reachable even if it omits the usual service UUID. */
+    public suspend fun rememberDiscoveredSensor(sensorId: Int, address: String): Unit = Unit
 
     public fun missingPermission(): List<String>
 

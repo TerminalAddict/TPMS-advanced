@@ -98,6 +98,7 @@ internal data class RawSysgration private constructor(
             ?.manufacturerSpecificData
             ?.takeIf { it.size > 0 }
             ?.valueAt(0)
+            ?.takeIf { it.size >= 16 && (it[0].toInt() and 0xFF) in 0x80..0x83 }
             .let { it ?: return null }
             .let { RawSysgration(scanResult.rssi, it) }
             .takeIf { it.address().contentEquals(expectedAddress) }

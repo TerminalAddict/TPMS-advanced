@@ -24,13 +24,12 @@ import androidx.core.content.ContextCompat.checkSelfPermission
 import androidx.core.content.PermissionChecker.PERMISSION_GRANTED
 import androidx.core.content.getSystemService
 import co.touchlab.kermit.Logger
-import com.masselis.tpmsadvanced.core.common.dematerializeCompletion
-import com.masselis.tpmsadvanced.core.common.materializeCompletion
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BleDiagnostics
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.Failure
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus
 import com.masselis.tpmsadvanced.data.vehicle.model.ScannerRecord
+import com.masselis.tpmsadvanced.data.vehicle.model.BleAdvertisement
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -38,15 +37,16 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 
@@ -62,6 +62,8 @@ internal class BluetoothLeScannerImpl(
     override val scanStatus = status.asStateFlow()
 
     private val bluetoothAdapter get() = context.getSystemService<BluetoothManager>()?.adapter
+    private val savedAddresses = context.getSharedPreferences("DISCOVERED_SENSORS", Context.MODE_PRIVATE)
+    private val addressFilters = MutableStateFlow(savedAddresses.all.values.filterIsInstance<String>().toSet())
 
     private val bluetoothEnabled = callbackFlow {
         val receiver = object : BroadcastReceiver() {
@@ -92,7 +94,7 @@ internal class BluetoothLeScannerImpl(
 
     @SuppressLint("InlinedApi")
     @RequiresPermission("android.permission.BLUETOOTH_SCAN")
-    private fun scan(mode: Int) = callbackFlow<ScanEvent<ScanResult>> {
+    private fun scan(scanFilters: List<ScanFilter>?) = callbackFlow<ScanEvent<ScanResult>> {
         val callback = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) {
                 launch { send(ScanEvent.Reading(result)) }
@@ -112,10 +114,11 @@ internal class BluetoothLeScannerImpl(
             ?: throw Failure.ScannerIsNull(bluetoothAdapter?.state)
         try {
             leScanner.startScan(
-                filters,
+                scanFilters,
                 ScanSettings
                     .Builder()
-                    .setScanMode(mode)
+                    .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+                    .setLegacy(bluetoothAdapter?.isLeExtendedAdvertisingSupported != true)
                     .setMatchMode(MATCH_MODE_AGGRESSIVE)
                     .setNumOfMatches(MATCH_NUM_ONE_ADVERTISEMENT)
                     .build(),
@@ -141,39 +144,42 @@ internal class BluetoothLeScannerImpl(
             status.value = next
             logger.i("Scan status: $next")
         }
-        .withMockAdvertisements(context, filters)
-        .mapNotNull {
-            logger.v("Sensor found during scan")
-            val decoded = decodeAdvertisement(it)
-            val record = decoded?.asTyre()
+        .withMockAdvertisements(context, scanFilters)
+        .map {
+            val packet = inspectAdvertisement(it)
             if (BleDiagnostics.enabled.value) {
-                val address = try { it.device.address } catch (_: SecurityException) { "unavailable" }
-                BleDiagnostics.record(it.scanRecord?.bytes, it.rssi, address,
-                    decoded?.javaClass?.simpleName, record?.sensorId, decoded?.diagnosticStatus())
+                BleDiagnostics.record(it.scanRecord?.bytes, it.rssi, packet.address,
+                    packet.decoder, packet.reading?.sensorId, packet.status)
             }
-            record ?: run {
-                    logger.d("Sensor not parsed. Scan bytes: ${it.scanRecord?.bytes?.toHexString()}")
-                    null
-                }
+            packet
         }
-        // Every accepted advertisement is a fresh reception, even when its measurements match.
-        // Convert each one so persistence and "Last seen" receive the new timestamp.
-        .onEach { logger.d("Sensor content: $it") }
 
     private val filters = SERVICES.map { ScanFilter.Builder().setServiceUuid(it).build() } +
         MANUFACTURER_IDS.map { ScanFilter.Builder().setManufacturerData(it, byteArrayOf()).build() }
 
-    private val lowLatencyScanFlow = scan(ScanSettings.SCAN_MODE_LOW_LATENCY).shared()
+    @OptIn(DelicateCoroutinesApi::class, ExperimentalCoroutinesApi::class)
+    private val shared = SharedAdvertisementScan(GlobalScope + Dispatchers.Default) { unfiltered ->
+        if (unfiltered) scan(null) else addressFilters.flatMapLatest { addresses ->
+            scan(filters + addresses.map { ScanFilter.Builder().setDeviceAddress(it).build() })
+        }
+    }
+
+    private val lowLatencyScanFlow = shared.readings.mapNotNull { it.reading }
 
     override fun highDutyScan(): Flow<ScannerRecord> = lowLatencyScanFlow
 
     override fun normalScan(): Flow<ScannerRecord> = lowLatencyScanFlow
 
-    @OptIn(DelicateCoroutinesApi::class)
-    private fun Flow<ScannerRecord>.shared() = this
-        .materializeCompletion()
-        .shareIn(GlobalScope + Dispatchers.Default, WhileSubscribed())
-        .dematerializeCompletion()
+    override fun discoverAdvertisements(): Flow<BleAdvertisement> = shared.discover()
+
+    @SuppressLint("UseKtx") // Check commit's result; the KTX helper discards it.
+    override suspend fun rememberDiscoveredSensor(sensorId: Int, address: String): Unit = withContext(Dispatchers.IO) {
+        require(BluetoothAdapter.checkBluetoothAddress(address)) { "Invalid Bluetooth address" }
+        check(savedAddresses.edit().putString(sensorId.toString(), address).commit()) {
+            "Could not save discovery address. Retry before leaving discovery."
+        }
+        addressFilters.update { savedAddresses.all.values.filterIsInstance<String>().toSet() }
+    }
 
     @SuppressLint("InlinedApi")
     @Suppress("MagicNumber")

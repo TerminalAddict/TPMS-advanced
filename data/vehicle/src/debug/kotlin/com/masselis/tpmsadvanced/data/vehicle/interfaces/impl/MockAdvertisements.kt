@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.merge
 
 /** PR #44's debug replay idea, adapted to TyrePing's package and packet formats. */
 @SuppressLint("MissingPermission")
-internal fun Flow<ScanResult>.withMockAdvertisements(context: Context, filters: List<ScanFilter>): Flow<ScanResult> =
+internal fun Flow<ScanResult>.withMockAdvertisements(context: Context, filters: List<ScanFilter>?): Flow<ScanResult> =
     merge(this, callbackFlow {
         val logger = Logger.withTag("MockAdvertisements")
         val receiver = object : BroadcastReceiver() {
@@ -36,8 +36,10 @@ internal fun Flow<ScanResult>.withMockAdvertisements(context: Context, filters: 
                         adapter.getRemoteDevice(intent.getStringExtra("address") ?: "AA:BB:CC:DD:EE:01"),
                         intent.number("rssi", -60f).toInt()
                     )
-                    require(filters.any { it.matches(result) }) { "Packet does not match a TPMS scan filter" }
-                    require(decodeAdvertisement(result)?.asTyre() != null) { "Unsupported TPMS advertisement" }
+                    if (filters != null) {
+                        require(filters.any { it.matches(result) }) { "Packet does not match a TPMS scan filter" }
+                        require(decodeAdvertisement(result)?.asTyre() != null) { "Unsupported TPMS advertisement" }
+                    }
                     check(trySend(result).isSuccess) { "Scan receiver is busy or closed" }
                 }.onSuccess {
                     logger.i("Accepted simulated advertisement")

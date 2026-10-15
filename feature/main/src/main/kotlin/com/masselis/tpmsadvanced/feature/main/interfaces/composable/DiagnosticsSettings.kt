@@ -50,7 +50,8 @@ public fun DiagnosticsSettings() {
     }
     Column {
         Text("BLE diagnostics", style = MaterialTheme.typography.titleMedium)
-        Text("Capture advertisements matching TPMS filters while scanning. Includes Bluetooth addresses, " +
+        Text("Capture TPMS advertisements while monitoring, or all nearby BLE packets during sensor discovery. " +
+            "Includes Bluetooth addresses, " +
             "timestamps, RSSI, full packet bytes and available status bits. " +
             "About 4 MB retained; oldest packets rotate out. " +
             "Capture starts off after every app restart. Unknown bits are not interpreted as alarms.")

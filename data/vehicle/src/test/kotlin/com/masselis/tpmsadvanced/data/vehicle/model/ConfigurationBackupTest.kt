@@ -15,7 +15,17 @@ internal class ConfigurationBackupTest {
     private fun backup(vehicle: BackupVehicle = vehicle()) = ConfigurationBackup(vehicles = listOf(vehicle),
         settings = BackupSettings(pressureUnit = "PSI", temperatureUnit = "FAHRENHEIT", alertSound = "SPEECH",
             calibrations = mapOf(Int.MIN_VALUE to BackupCalibration(4f, 1.1f, -2f, 1f)),
-            triggers = mapOf(vehicle.uuid to BackupRideTrigger("AA:BB:CC:DD:EE:FF", true, -75))))
+            triggers = mapOf(vehicle.uuid to BackupRideTrigger("AA:BB:CC:DD:EE:FF", true, -75)),
+            discoveredAddresses = mapOf(Int.MIN_VALUE to "AA:BB:CC:DD:EE:01")))
+
+    @Test fun `backups from before discovery default to no saved addresses`() {
+        val source = backup().copy(settings = BackupSettings())
+        assertEquals(source, ConfigurationBackup.decode(source.encode().replace(
+            ",\n        \"discoveredAddresses\": {}", "")))
+        assertFailsWith<IllegalArgumentException> {
+            source.copy(settings = BackupSettings(discoveredAddresses = mapOf(1 to "invalid"))).validate()
+        }
+    }
 
     @Test fun `round trip preserves unsigned sensor bits calibrations and all vehicle kinds`() {
         Vehicle.Kind.entries.forEach { kind ->

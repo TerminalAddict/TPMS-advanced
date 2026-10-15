@@ -57,6 +57,9 @@ public class ConfigurationBackups internal constructor(private val database: Dat
                     vehicle.uuid to BackupRideTrigger(address, triggers.getBoolean("${vehicle.uuid}.beacon", false),
                         triggers.getInt("${vehicle.uuid}.rssi", -80))
                 }
+            }.toMap(),
+            preferences("DISCOVERED_SENSORS").all.mapNotNull { (key, value) ->
+                key.toIntOrNull()?.let { id -> (value as? String)?.let { id to it } }
             }.toMap()
         )).also { it.validate() }
     }
@@ -112,6 +115,10 @@ public class ConfigurationBackups internal constructor(private val database: Dat
             putInt("repeat", settings.repeatSeconds); putInt("critical", settings.criticalSeconds)
         }
         edit("WAITING_POWER") { putBoolean("saving", settings.saveWaitingPower) }
+        edit("DISCOVERED_SENSORS") {
+            sensorIds.forEach { remove(it.toString()) }
+            settings.discoveredAddresses.forEach { (id, address) -> putString(id.toString(), address) }
+        }
         edit("SENSOR_CALIBRATION") {
             sensorIds.forEach { id -> remove("$id.po"); remove("$id.pm"); remove("$id.to"); remove("$id.tm") }
             settings.calibrations.forEach { (id, value) ->

@@ -45,6 +45,7 @@ TyrePing builds on the core capabilities of TPMS Advanced:
 - Pressure and temperature unit selection
 - QR-code sensor binding with invalid-code and conflicting-assignment checks
 - Tap-wheel sensor management, guided Bluetooth identification, and move/swap/rotate assignments
+- Unfiltered BLE sensor discovery, installation markers, packet inspection and per-device JSONL export
 - Individual sensor pressure and temperature calibration
 - Optional speech, tones and vibration with repeat intervals and temporary silence
 - Pressure/temperature history graphs, reading sessions and CSV export
@@ -111,9 +112,10 @@ The current feature set is covered by automated tests, including local layout re
 sensor reception, accessory/beacon detection, screen-off behaviour and real ride leak detection
 still need hardware validation. Leak detection is experimental and disabled by default.
 
-The v0.7.0 pre-release feature batch is tracked in [ROADMAP.md](ROADMAP.md). These additions are in
-testing; v0.6.0 remains the latest stable release. See [TESTING.md](TESTING.md) for installation
-and a checklist covering all ten additions, including simulated readings without physical sensors.
+The v0.8.0 pre-release adds BLE sensor discovery to the v0.7.0 feature batch tracked in
+[ROADMAP.md](ROADMAP.md). These additions are in testing; v0.6.0 remains the latest stable release.
+See [TESTING.md](TESTING.md) for installation, the discovery workflow, and a checklist covering all
+ten earlier additions, including simulated readings without physical sensors.
 
 ### Audible and vibration alerts
 
@@ -133,7 +135,7 @@ screen-off delivery remain device tests.
 
 ### Sensor assignment and calibration
 
-Tap a tyre outline or its link icon, or use **Manage sensors** in Settings. An empty reading also
+Tap a tyre outline or its link icon, or use **Sensors** in Settings. An empty reading also
 opens sensor management; tapping populated readings still magnifies them. Enter a sensor ID in
 decimal or with a `0x` hex prefix, or choose **Identify sensor via Bluetooth**. While parked, removing
 and refitting a sensor can highlight a candidate whose pressure changed by at least 15 kPa. Verify
@@ -151,6 +153,42 @@ Cancel discards edits; Reset changes the draft until Apply is tapped. Calibratio
 sensor across wheels and vehicles. Live displays and alerts use corrected values; raw recordings
 stay unchanged. Calibration changes also reset the experimental leak trend.
 
+### Discover sensors without QR codes or printed IDs
+
+In v0.8.0, open **Settings → Sensors → Discover sensors**. Choose a wheel on
+the current vehicle, start scanning, tap **Mark, then fit sensor**, and fit one sensor while parked.
+The page highlights devices first seen since the mark, changed packets, and decoded pressure changes
+of at least 5 kPa. These are candidates to inspect, not automatic assignments. Check the decoded
+pressure and temperature against the tyre before confirming **Assign to selected wheel**. Existing
+assignments and replacements are shown before saving.
+
+Discovery temporarily removes the shared TPMS scanner's service/manufacturer filters, so unnamed
+devices and unfamiliar protocols remain visible. Every packet is tried against the existing decoders,
+including both Bekubee/HRTPMS variants. The page shows address, RSSI, last seen, raw advertisement,
+manufacturer data, service UUIDs/service data, and any recognised readings. Unknown devices can be
+exported but cannot be assigned. A previously decoded reading keeps its own timestamp, and assignment
+requires a reading less than a minute old. Known sensor IDs and their discovery addresses are saved;
+normal monitoring includes those addresses after restart. Addresses that change require rediscovery.
+
+The photographed **MRD-TY-T05-04** kit is a candidate for testing, not yet a verified supported model.
+Its F.W/R.W and A/B markings do not supply unique sensor IDs. A [T05 supplier page](https://www.aotu-link.com/html/products/tire-pressure-sensor-t05.html)
+describes HRTpms support, but this does not establish that every T05-labelled kit uses an identical
+packet format. Actual captures from this kit are needed to confirm decoding; no speculative decoder
+or Bluetooth connection/pairing commands have been added.
+
+Each scan lasts up to two minutes and stops when the page is hidden or closed. It shares one radio
+callback with tyre monitoring; normal filters resume afterwards, subject to Android's scan-start
+rate limit. Android may pause unfiltered scanning with the screen off; see the
+[Android scanner reference](https://developer.android.com/reference/android/bluetooth/le/BluetoothLeScanner).
+The app still uses Android's `neverForLocation` permission assertion, which can suppress some beacon
+types; “unfiltered” describes TyrePing's scan filters, not a guarantee that Android delivers every radio packet.
+
+**Export device** saves only that address's retained packets; **Export all packets** saves the session.
+JSONL includes complete received bytes (including trailing zeros), timestamps, manufacturer/service
+data, RSSI, and decoder results. Memory is bounded to 200 devices and the latest 1,000 packets; older
+entries rotate out. Export before closing the page, as this session capture is not persistent. The
+separate opt-in BLE diagnostics capture below can retain packets across app restarts.
+
 ### History and diagnostics
 
 Open **Pressure / temperature history and CSV** in Settings. Choose a 1-hour, 6-hour, 24-hour or
@@ -163,7 +201,8 @@ Graphs are limited to 20,000 readings per window and explain when a shorter wind
 CSV export includes every reading in the selected time range, with UTC timestamps, original wheel,
 sensor ID, raw pressure/temperature, battery, RSSI and alarm flag. Calibration does not rewrite history.
 
-**BLE diagnostics → Capture packets** saves advertisements matching the TPMS filters while scanning.
+**BLE diagnostics → Capture packets** saves TPMS advertisements while monitoring and all delivered
+BLE advertisements while discovery is running.
 Capture is opt-in and starts off after every process restart. The JSONL export includes full packet
 bytes, Bluetooth address, UTC timestamp, RSSI, decoder, sensor ID and available raw status bits.
 Unknown bits are not given guessed alarm meanings. Two rotating files retain about 4 MB; queue drops
@@ -186,7 +225,8 @@ changes, and Android's unavailable-RSSI marker is ignored. Actual battery saving
 ### Backup and restore
 
 Use **Backup and restore → Export configuration** to save vehicles, wheel assignments, thresholds,
-calibrations, units, alert preferences, leak detection, waiting-power settings and ride triggers as JSON.
+calibrations, discovered sensor addresses, units, alert preferences, leak detection, waiting-power settings
+and ride triggers as JSON. Discovery addresses are optional when reading backups from older builds.
 History and raw captures use their separate exports. Permissions, temporary silence and running
 monitoring sessions are not transferred.
 
@@ -404,19 +444,19 @@ Run the release script from PowerShell in the repository. It requires a clean `t
 that exactly matches `origin/tyreping`, an authenticated GitHub CLI, the Android toolchain, and
 the existing signing files in `secrets/`. Commit and push the intended changes first.
 
-For example, to prepare the `0.7.0` pre-release, check the prerequisites without building or publishing:
+For example, to prepare the `0.8.0` pre-release, check the prerequisites without building or publishing:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tyreping-release.ps1 -Version 0.7.0 -DryRun
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tyreping-release.ps1 -Version 0.8.0 -DryRun
 ```
 
 Then build and publish the pre-release:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tyreping-release.ps1 -Version 0.7.0
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tyreping-release.ps1 -Version 0.8.0
 ```
 
-The script asks you to type `RELEASE v0.7.0`. It updates the version, runs unit tests, builds and
+The script asks you to type `RELEASE v0.8.0`. It updates the version, runs unit tests, builds and
 verifies the signed APK, commits the version change, creates a tag, pushes `tyreping` and the tag,
 and publishes a GitHub pre-release. Release notes come from commit subjects unless `-NotesFile`
 is supplied. Choose a new, unused version for subsequent releases.
@@ -424,8 +464,8 @@ is supplied. Choose a new, unused version for subsequent releases.
 With the repository at `D:\TyrePing`, the default output is:
 
 ```text
-D:\TyrePing-Releases\0.7.0\
-    TyrePing-v0.7.0.apk
+D:\TyrePing-Releases\0.8.0\
+    TyrePing-v0.8.0.apk
     SHA256SUMS.txt
     RELEASE_NOTES.md
 ```
@@ -433,7 +473,7 @@ D:\TyrePing-Releases\0.7.0\
 Install that APK with:
 
 ```powershell
-adb install -r D:\TyrePing-Releases\0.7.0\TyrePing-v0.7.0.apk
+adb install -r D:\TyrePing-Releases\0.8.0\TyrePing-v0.8.0.apk
 ```
 
 Add `-Stable` to publish a normal release. Use `-Resume` only when recovering a failed publication

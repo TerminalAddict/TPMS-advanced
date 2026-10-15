@@ -160,7 +160,8 @@ internal fun wheelLabel(location: Location): String = location.toString().lowerc
 @Composable
 public fun SensorManagementSettings(vehicle: Vehicle) {
     var selected by remember { mutableStateOf<Location?>(null) }
-    Text("Manage sensors", style = MaterialTheme.typography.titleMedium)
+    Text("Sensors", style = MaterialTheme.typography.titleMedium)
+    SensorDiscoveryButton(vehicle)
     Text("Assign, calibrate, move, swap or rotate sensor assignments.")
     vehicle.kind.locations.forEach { wheel ->
         TextButton(onClick = { selected = wheel }) { Text(wheelLabel(wheel)) }
