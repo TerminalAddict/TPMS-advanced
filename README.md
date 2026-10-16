@@ -66,6 +66,7 @@ TyrePing builds on the core capabilities of TPMS Advanced:
 - Tap-to-enlarge readings and larger landscape cards
 - Simulated TPMS advertisements through ADB in debug builds
 - Dark mode
+- About page with the app version, TyrePing website, licences and maintainer information
 - Android Auto support
 - Direct vehicle shortcuts
 

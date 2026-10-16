@@ -1,5 +1,21 @@
 # Combined feature-batch testing
 
+## About page — v0.9.1 pre-release and debug checkpoint
+
+Developed on `codex/about-page`, based on v0.9.0. The signed v0.9.1 pre-release adds this page
+and updates existing signed TyrePing installations. The separate debug checkpoint retains version
+0.9.0 and includes ADB sensor simulation. Install the debug checkpoint with:
+
+```powershell
+adb install -r "D:\TyrePing-Releases\debug\TyrePing-about-debug.apk"
+```
+
+Open the three-dot menu → **About**. Check the app version, Paul Willard introduction and all three
+links (TyrePing, licences and Paul's website). Each should open in the browser. Return to TyrePing,
+then use the toolbar or Android Back button to return to the vehicle. Check scrolling with a large
+font, landscape orientation and dark mode. If no browser is installed, a message should appear
+instead of the app closing. This build includes all v0.9.0 ride tools below.
+
 ## Features 21–29 — v0.9.0 pre-release and debug checkpoint
 
 Developed on `codex/ride-readiness-and-vehicle-tools`, based on v0.8.0 (`eed5160`).

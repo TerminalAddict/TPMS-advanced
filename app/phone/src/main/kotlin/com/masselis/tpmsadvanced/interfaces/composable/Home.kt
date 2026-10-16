@@ -153,6 +153,9 @@ internal fun VehicleHome(
                             modifier = modifier
                         )
                     }
+                    composable("${Path.About(vehicleComponent.vehicle.uuid)}") {
+                        About(snackbarHostState = snackbarHostState, modifier = modifier)
+                    }
                     composable("${Path.BindingMethod(vehicleComponent.vehicle.uuid)}") {
                         ChooseBindingMethod(
                             scanQrCode = {
@@ -255,6 +258,7 @@ private fun TopAppBar(
             when (currentPath) {
                 is Path.Home -> CurrentVehicleDropdown(Modifier.testTag(carListDropdownMenu))
                 is Path.Settings -> Text(text = "Settings")
+                is Path.About -> Text(text = "About")
                 is Path.BindingMethod -> Text(text = "Binding method")
                 is Path.Unlocated -> Text(text = "Binding")
                 is Path.QrCode, null -> {}
@@ -262,7 +266,7 @@ private fun TopAppBar(
         },
         navigationIcon = {
             when (currentPath) {
-                is Path.Settings, is Path.BindingMethod, is Path.QrCode, is Path.Unlocated -> {
+                is Path.Settings, is Path.About, is Path.BindingMethod, is Path.QrCode, is Path.Unlocated -> {
                     IconButton(
                         onClick = { navController.popBackStack() },
                         content = {
@@ -316,10 +320,18 @@ private fun TopAppBar(
                             },
                             modifier = Modifier.testTag(HomeTags.Overflow.settings)
                         )
+                        DropdownMenuItem(
+                            text = { Text("About") },
+                            onClick = {
+                                showMenu = false
+                                navController.navigate("${Path.About(currentPath.vehicleUUID)}")
+                            },
+                            modifier = Modifier.testTag(HomeTags.Overflow.about)
+                        )
                     }
                 }
 
-                is Path.Settings, is Path.BindingMethod, is Path.QrCode, is Path.Unlocated, null -> {}
+                is Path.Settings, is Path.About, is Path.BindingMethod, is Path.QrCode, is Path.Unlocated, null -> {}
             }
         },
         modifier = modifier
@@ -418,5 +430,6 @@ internal object HomeTags {
         const val root = "HomeTags_Overflow_root"
         const val bindingMethod = "HomeTags_Overflow_bindingMethod"
         const val settings = "HomeTags_Overflow_settings"
+        const val about = "HomeTags_Overflow_about"
     }
 }
