@@ -59,6 +59,14 @@ public class SensorDatabase internal constructor(
         queries.deleteByVehicleAndLocation(vehicleId, location)
     }
 
+    public suspend fun unbindIfCurrent(vehicleId: UUID, expected: Sensor): Unit = withContext(IO) {
+        database.transaction {
+            require(queries.selectByVehicleAndLocation(vehicleId, expected.location, mapper).executeAsOneOrNull()
+                == expected) { "Bindings changed. Review the assignment again." }
+            queries.deleteByVehicleAndLocation(vehicleId, expected.location)
+        }
+    }
+
     /** Rejects a stale confirmation instead of replacing an assignment the user has not reviewed. */
     public suspend fun assign(
         sensor: Sensor,

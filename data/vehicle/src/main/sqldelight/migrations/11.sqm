@@ -1,0 +1,96 @@
+CREATE TABLE SensorInventory (
+    id INTEGER NOT NULL PRIMARY KEY,
+    label TEXT NOT NULL DEFAULT '',
+    manufacturer TEXT NOT NULL DEFAULT '',
+    notes TEXT NOT NULL DEFAULT '',
+    protocol TEXT NOT NULL DEFAULT '',
+    address TEXT NOT NULL DEFAULT '',
+    firstSeen REAL,
+    lastSeen REAL,
+    voltage REAL,
+    percent INTEGER,
+    pressure REAL,
+    temperature REAL,
+    warning TEXT,
+    warningAt REAL
+);
+
+CREATE TABLE SensorInstallation (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    sensorId INTEGER NOT NULL,
+    vehicleId TEXT NOT NULL,
+    vehicleName TEXT NOT NULL,
+    location INTEGER NOT NULL,
+    started REAL NOT NULL,
+    ended REAL,
+    origin TEXT NOT NULL DEFAULT 'Assignment'
+);
+CREATE INDEX sensor_installation_id ON SensorInstallation(sensorId, started);
+
+CREATE TABLE SensorHealthDaily (
+    sensorId INTEGER NOT NULL,
+    day INTEGER NOT NULL,
+    packets INTEGER NOT NULL,
+    rssiTotal INTEGER NOT NULL,
+    rssiCount INTEGER NOT NULL,
+    voltageTotal REAL NOT NULL,
+    voltageCount INTEGER NOT NULL,
+    percentTotal REAL NOT NULL,
+    percentCount INTEGER NOT NULL,
+    observedSeconds REAL NOT NULL,
+    missed INTEGER NOT NULL,
+    longestGap REAL NOT NULL,
+    questionable INTEGER NOT NULL,
+    PRIMARY KEY(sensorId, day)
+);
+
+CREATE TABLE SensorIssue (
+    issueKey TEXT NOT NULL PRIMARY KEY,
+    sensorId INTEGER,
+    address TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    firstSeen REAL NOT NULL,
+    lastSeen REAL NOT NULL,
+    occurrences INTEGER NOT NULL,
+    packet TEXT NOT NULL
+);
+CREATE INDEX sensor_issue_last ON SensorIssue(lastSeen);
+
+CREATE TABLE SensorRadioIdentity (address TEXT NOT NULL PRIMARY KEY, sensorId INTEGER NOT NULL);
+
+CREATE TRIGGER sensor_library_insert AFTER INSERT ON Sensor BEGIN
+    INSERT INTO SensorInventory(id) SELECT new.id WHERE NOT EXISTS (SELECT 1 FROM SensorInventory WHERE id = new.id);
+    INSERT INTO SensorInstallation(sensorId, vehicleId, vehicleName, location, started)
+    VALUES (new.id, new.vehicleId, (SELECT name FROM Vehicle WHERE uuid = new.vehicleId), new.location,
+        CAST(strftime('%s','now') AS REAL));
+END;
+
+CREATE TRIGGER sensor_library_move AFTER UPDATE OF vehicleId, location ON Sensor
+WHEN old.vehicleId != new.vehicleId OR old.location != new.location BEGIN
+    UPDATE SensorInstallation SET ended = CAST(strftime('%s','now') AS REAL)
+    WHERE sensorId = old.id AND ended IS NULL;
+    INSERT INTO SensorInventory(id) SELECT new.id WHERE NOT EXISTS (SELECT 1 FROM SensorInventory WHERE id = new.id);
+    INSERT INTO SensorInstallation(sensorId, vehicleId, vehicleName, location, started)
+    VALUES (new.id, new.vehicleId, (SELECT name FROM Vehicle WHERE uuid = new.vehicleId), new.location,
+        CAST(strftime('%s','now') AS REAL));
+END;
+
+CREATE TRIGGER sensor_library_remove AFTER DELETE ON Sensor BEGIN
+    UPDATE SensorInstallation SET ended = CAST(strftime('%s','now') AS REAL)
+    WHERE sensorId = old.id AND ended IS NULL;
+END;
+
+INSERT OR IGNORE INTO SensorInventory(id) SELECT id FROM Sensor;
+-- Upgrade old histories in indexed sensor order; remove this migration-only index after backfill.
+CREATE INDEX tyre_inventory_upgrade ON Tyre(id, timestamp);
+INSERT OR IGNORE INTO SensorInventory(id, firstSeen, lastSeen) SELECT id, MIN(timestamp), MAX(timestamp) FROM Tyre GROUP BY id;
+UPDATE SensorInventory SET firstSeen = (SELECT MIN(timestamp) FROM Tyre WHERE Tyre.id = SensorInventory.id),
+lastSeen = (SELECT MAX(timestamp) FROM Tyre WHERE Tyre.id = SensorInventory.id),
+voltage = (SELECT batteryVoltage FROM Tyre WHERE Tyre.id = SensorInventory.id ORDER BY timestamp DESC LIMIT 1),
+percent = (SELECT batteryPercent FROM Tyre WHERE Tyre.id = SensorInventory.id ORDER BY timestamp DESC LIMIT 1),
+pressure = (SELECT pressure FROM Tyre WHERE Tyre.id = SensorInventory.id ORDER BY timestamp DESC LIMIT 1),
+temperature = (SELECT temperature FROM Tyre WHERE Tyre.id = SensorInventory.id ORDER BY timestamp DESC LIMIT 1);
+DROP INDEX tyre_inventory_upgrade;
+INSERT INTO SensorInstallation(sensorId, vehicleId, vehicleName, location, started, origin)
+SELECT Sensor.id, Sensor.vehicleId, Vehicle.name, Sensor.location, CAST(strftime('%s','now') AS REAL),
+'Existing assignment at upgrade; earlier installation date unknown' FROM Sensor JOIN Vehicle ON Vehicle.uuid = Sensor.vehicleId;

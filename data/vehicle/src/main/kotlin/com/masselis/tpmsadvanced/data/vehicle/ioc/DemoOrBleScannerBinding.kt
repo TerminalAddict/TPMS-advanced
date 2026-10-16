@@ -26,8 +26,9 @@ public object DemoOrBleScannerBinding {
     @SingleIn(AppScope::class)
     private fun bluetoothLeScannerImpl(
         demoOrBleScannerUseCase: DemoOrBleScannerUseCase,
-        context: Context
+        context: Context,
+        sensorLibrary: com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorLibrary,
     ): BluetoothLeScanner =
         if (demoOrBleScannerUseCase.isDemo.value) DemoLeScanner()
-        else BluetoothLeScannerImpl(context)
+        else BluetoothLeScannerImpl(context, sensorLibrary)
 }

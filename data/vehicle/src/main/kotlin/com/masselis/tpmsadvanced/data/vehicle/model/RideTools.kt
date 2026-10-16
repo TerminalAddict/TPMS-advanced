@@ -66,8 +66,11 @@ public data class VehicleRideTools(
     val records: List<MaintenanceRecord> = emptyList(),
     val reminder: MaintenanceReminder = MaintenanceReminder(),
     val accessoryAddress: String = "",
+    val specifications: List<TyreSpecification> = emptyList(),
 ) {
     public fun validate() {
+        require(specifications.size <= 30 && specifications.distinctBy { it.id }.size == specifications.size)
+        specifications.forEach { it.validate() }
         require(profiles.size <= 30 && profiles.distinctBy { it.id }.size == profiles.size)
         require(profiles.distinctBy { it.name.lowercase() }.size == profiles.size)
         require(records.size <= 1000 && records.distinctBy { it.id }.size == records.size)

@@ -53,7 +53,8 @@ import kotlinx.coroutines.plus
 
 @SuppressLint("MissingPermission")
 internal class BluetoothLeScannerImpl(
-    private val context: Context
+    private val context: Context,
+    private val sensorLibrary: com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorLibrary,
 ) : BluetoothLeScanner {
 
     private val logger = Logger.withTag("BluetoothLeScannerImpl")
@@ -144,12 +145,19 @@ internal class BluetoothLeScannerImpl(
         .recoveringScan(bluetoothEnabled) { next ->
             status.value = next
             SensorReception.status(next)
+            sensorLibrary.scanStatus(next)
             logger.i("Scan status: $next")
         }
         .withMockAdvertisements(context, scanFilters)
         .map {
             val packet = inspectAdvertisement(it)
             SensorReception.record(packet)
+            try { sensorLibrary.record(packet, savedAddresses.all.entries.firstOrNull {
+                entry -> entry.value == packet.address }?.key?.toIntOrNull()) }
+            catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (failure: android.database.SQLException) {
+                logger.w("Could not save sensor health evidence", failure)
+            }
             if (BleDiagnostics.enabled.value) {
                 BleDiagnostics.record(it.scanRecord?.bytes, it.rssi, packet.address,
                     packet.decoder, packet.reading?.sensorId, packet.status)
@@ -178,7 +186,9 @@ internal class BluetoothLeScannerImpl(
     @SuppressLint("UseKtx") // Check commit's result; the KTX helper discards it.
     override suspend fun rememberDiscoveredSensor(sensorId: Int, address: String): Unit = withContext(Dispatchers.IO) {
         require(BluetoothAdapter.checkBluetoothAddress(address)) { "Invalid Bluetooth address" }
-        check(savedAddresses.edit().putString(sensorId.toString(), address).commit()) {
+        val editor = savedAddresses.edit()
+        savedAddresses.all.filterValues { it == address }.keys.forEach { editor.remove(it) }
+        check(editor.putString(sensorId.toString(), address).commit()) {
             "Could not save discovery address. Retry before leaving discovery."
         }
         addressFilters.update { savedAddresses.all.values.filterIsInstance<String>().toSet() }

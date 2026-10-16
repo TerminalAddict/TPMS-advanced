@@ -17,6 +17,19 @@ internal fun inspectAdvertisement(result: ScanResult): BleAdvertisement {
     catch (_: IllegalStateException) { null }
     catch (_: SecurityException) { null }
     val manufacturers = record?.manufacturerSpecificData
+    val reading = decoded?.second
+    val tyre = reading as? com.masselis.tpmsadvanced.data.vehicle.model.Tyre
+    val quality = buildList {
+        if (decoded == null && listOf(RawPecham.SERVICE_UUID, RawBekubeeKy.SERVICE_UUID,
+                RawBekubeeTpms.SERVICE_UUID, RawSysgration.SERVICE_UUID, RawWicarlink.SERVICE_UUID)
+                .any { record?.serviceUuids?.contains(it) == true })
+            add("Possible TPMS packet could not be decoded: unsupported, malformed or checksum failure")
+        if (tyre != null) addAll(com.masselis.tpmsadvanced.data.vehicle.model.suspiciousReading(
+            tyre.pressure.kpa, tyre.temperature.celsius, tyre.sensorBattery))
+    }
+    // Non-finite fields cannot be stored as a usable reading. Their packet and explicit warning remain visible.
+    val usable = reading.takeUnless { tyre != null &&
+        (!tyre.pressure.kpa.isFinite() || !tyre.temperature.celsius.isFinite()) }
     return BleAdvertisement(
         timestamp = now(), elapsedNanos = result.timestampNanos,
         address = result.device.address, name = record?.deviceName, rssi = result.rssi,
@@ -28,7 +41,7 @@ internal fun inspectAdvertisement(result: ScanResult): BleAdvertisement {
         serviceUuids = record?.serviceUuids.orEmpty().map { it.toString() },
         serviceData = record?.serviceData.orEmpty().mapKeys { it.key.toString() }.mapValues { it.value.toHexString() },
         connectable = result.isConnectable, dataStatus = result.dataStatus,
-        decoder = decoded?.first, reading = decoded?.second, status = decoded?.third,
+        decoder = decoded?.first, reading = usable, status = decoded?.third, qualityWarnings = quality,
     )
 }
 

@@ -13,8 +13,11 @@ public data class ConfigurationBackup(
     val version: Int = 1,
     val vehicles: List<BackupVehicle>,
     val settings: BackupSettings,
+    val sensorLibrary: List<SensorMetadata> = emptyList(),
 ) {
     public fun validate() {
+        require(sensorLibrary.size <= 1000 && sensorLibrary.distinctBy { it.id }.size == sensorLibrary.size)
+        sensorLibrary.forEach { it.validate() }
         require(format == "TyrePing configuration" && version == 1) { "Unsupported backup format or version" }
         require(vehicles.size in 1..100 && vehicles.map { it.uuid }.distinct().size == vehicles.size) {
             "Invalid vehicle list"

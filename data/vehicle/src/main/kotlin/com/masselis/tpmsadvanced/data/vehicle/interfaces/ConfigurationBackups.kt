@@ -70,7 +70,10 @@ public class ConfigurationBackups internal constructor(private val database: Dat
                 vehicles = data.vehicles.filterKeys { id ->
                 vehicles.any { it.uuid == id }
             }) }
-        )).also { it.validate() }
+        ), sensorLibrary = database.sensorLibraryQueries.inventory().executeAsList().map {
+            com.masselis.tpmsadvanced.data.vehicle.model.SensorMetadata(it.id.toInt(), it.label,
+                it.manufacturer, it.notes)
+        }).also { it.validate() }
     }
 
     /** Merges vehicles by UUID, replaces their bindings and preserves history and unrelated vehicles. */
@@ -90,6 +93,10 @@ public class ConfigurationBackups internal constructor(private val database: Dat
             throw failure
         }
         database.transaction {
+                backup.sensorLibrary.forEach {
+                    database.sensorLibraryQueries.ensureSensor(it.id.toLong())
+                    database.sensorLibraryQueries.saveMetadata(it.label, it.manufacturer, it.notes, it.id.toLong())
+                }
                 backup.vehicles.forEach { vehicle ->
                     database.vehicleQueries.restoreConfiguration(UUID.fromString(vehicle.uuid),
                         Vehicle.Kind.valueOf(vehicle.kind),

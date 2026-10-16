@@ -136,6 +136,7 @@ internal fun DiscoveryDeviceCard(device: BleDiscoverySession.Device, now: Double
                 Text("Connectable: ${packet.connectable} · data status: ${packet.dataStatus} (0 = complete)")
                 Text("Latest packet decoder: ${packet.decoder ?: "none"}")
                 packet.status?.let { Text(it) }
+                QualityWarnings(packet.qualityWarnings)
                 CompatibilityInspector(packet, packets, onAnonymisedExport)
             } }
         }

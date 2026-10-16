@@ -13,6 +13,7 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 internal class InspectAdvertisementTest {
     @Before fun logging() { Logger.setLogWriters(CommonWriter()) }
@@ -65,6 +66,7 @@ internal class InspectAdvertisementTest {
         assertNull(packet.name)
         assertNull(packet.reading)
         assertEquals("06ff0200010203", packet.bytes)
+        assertTrue(packet.qualityWarnings.isEmpty())
     }
 
     @Test fun `truncated KY BR and TPMS packets cannot terminate discovery`() {
@@ -72,7 +74,23 @@ internal class InspectAdvertisementTest {
             val packet = inspectAdvertisement(result(name, "00", "0100"))
             assertNull(packet.reading)
             assertEquals("0100", packet.bytes)
+            assertTrue(packet.qualityWarnings.any { it.contains("could not be decoded") })
         }
+    }
+
+    @Test fun `implausible finite packet fields remain usable for emergency alerts with visible warnings`() {
+        val packet = inspectAdvertisement(result("TPMS", "AFFFFFFF002D56A8B4", "0100"))
+        val tyre = assertIs<Tyre>(packet.reading)
+        assertEquals(65435f, tyre.pressure.kpa)
+        assertEquals(205f, tyre.temperature.celsius)
+        assertEquals(2, packet.qualityWarnings.size)
+        assertTrue(packet.jsonLine().contains("qualityWarnings"))
+    }
+
+    @Test fun `zero pressure reaches existing alarm logic without an implausible-pressure warning`() {
+        val packet = inspectAdvertisement(result("TPMS", "AF450064002D56A8B4", "0100"))
+        assertEquals(0f, assertIs<Tyre>(packet.reading).pressure.kpa)
+        assertTrue(packet.qualityWarnings.isEmpty())
     }
 
     @Test fun `Sysgration address-like data with invalid length or wheel stays unknown`() {

@@ -13,11 +13,12 @@ public data class MonitoringTools(
     val liveNotification: Boolean = false,
     val parkedRoutes: Map<String, ParkedAlertRoute> = emptyMap(),
     val readingDays: Int = 0, val eventDays: Int = 0, val reportDays: Int = 0,
+    val sensorHealthDays: Int = 0,
 ) {
     public fun validate() {
         require(parkedRoutes.size <= 100)
         parkedRoutes.keys.forEach { require(UUID.fromString(it).toString() == it) }
-        listOf(readingDays, eventDays, reportDays).forEach { require(it in 0..3650) }
+        listOf(readingDays, eventDays, reportDays, sensorHealthDays).forEach { require(it in 0..3650) }
     }
 }
 

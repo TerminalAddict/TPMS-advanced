@@ -22,6 +22,7 @@ public data class BleAdvertisement(
     val decoder: String? = null,
     val reading: ScannerRecord? = null,
     val status: String? = null,
+    val qualityWarnings: List<String> = emptyList(),
 ) {
     public fun jsonLine(): String = buildJsonObject {
         put("format", "TyrePing BLE discovery v1")
@@ -32,6 +33,7 @@ public data class BleAdvertisement(
         putJsonArray("serviceUuids") { serviceUuids.forEach { add(it) } }
         putJsonObject("serviceData") { serviceData.forEach { (key, value) -> put(key, value) } }
         put("decoder", decoder); put("status", status)
+        putJsonArray("qualityWarnings") { qualityWarnings.forEach { add(it) } }
         reading?.let { put("sensorId", it.sensorId.toUInt().toString()) }
         (reading as? Tyre)?.let {
             put("pressureKpa", it.pressure.kpa); put("temperatureCelsius", it.temperature.celsius)

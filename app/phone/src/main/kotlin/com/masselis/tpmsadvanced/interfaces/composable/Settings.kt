@@ -61,6 +61,10 @@ internal fun Settings(
     NfcVehicleSettings(LocalVehicleComponent.current.vehicle)
     Separator()
     SensorManagementSettings(LocalVehicleComponent.current.vehicle)
+    com.masselis.tpmsadvanced.feature.main.interfaces.composable.SensorInventoryButton()
+    com.masselis.tpmsadvanced.feature.main.interfaces.composable.SensorIssuesButton()
+    com.masselis.tpmsadvanced.feature.main.interfaces.composable.ManufacturerSpecificationsButton(
+        LocalVehicleComponent.current.vehicle)
     ReadingHistoryButton(LocalVehicleComponent.current.vehicle)
     Separator()
     ReadingSettings()
@@ -68,6 +72,7 @@ internal fun Settings(
     DiagnosticsSettings()
     Separator()
     BackupSettings()
+    UpdateCheckerButton()
     Separator()
     Box(Modifier.fillMaxWidth()) {
         Text(

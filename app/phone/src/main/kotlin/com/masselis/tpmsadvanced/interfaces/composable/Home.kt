@@ -157,6 +157,11 @@ internal fun VehicleHome(
                     composable("${Path.About(vehicleComponent.vehicle.uuid)}") {
                         About(snackbarHostState = snackbarHostState, modifier = modifier)
                     }
+                    composable("${Path.Garage(vehicleComponent.vehicle.uuid)}") {
+                        com.masselis.tpmsadvanced.feature.main.interfaces.composable.Garage(modifier) {
+                            navController.popBackStack()
+                        }
+                    }
                     composable("${Path.BindingMethod(vehicleComponent.vehicle.uuid)}") {
                         ChooseBindingMethod(
                             scanQrCode = {
@@ -260,6 +265,7 @@ private fun TopAppBar(
                 is Path.Home -> CurrentVehicleDropdown(Modifier.testTag(carListDropdownMenu))
                 is Path.Settings -> Text(text = "Settings")
                 is Path.About -> Text(text = "About")
+                is Path.Garage -> Text(text = "Garage / Fleet")
                 is Path.BindingMethod -> Text(text = "Binding method")
                 is Path.Unlocated -> Text(text = "Binding")
                 is Path.QrCode, null -> {}
@@ -267,7 +273,8 @@ private fun TopAppBar(
         },
         navigationIcon = {
             when (currentPath) {
-                is Path.Settings, is Path.About, is Path.BindingMethod, is Path.QrCode, is Path.Unlocated -> {
+                is Path.Settings, is Path.About, is Path.Garage, is Path.BindingMethod,
+                is Path.QrCode, is Path.Unlocated -> {
                     IconButton(
                         onClick = { navController.popBackStack() },
                         content = {
@@ -305,6 +312,10 @@ private fun TopAppBar(
                         onDismissRequest = { showMenu = false },
                         modifier = Modifier.testTag(HomeTags.Overflow.root)
                     ) {
+                        DropdownMenuItem(text = { Text("Garage / Fleet") }, onClick = {
+                            showMenu = false
+                            navController.navigate("${Path.Garage(currentPath.vehicleUUID)}")
+                        })
                         DropdownMenuItem(
                             text = { Text("Bind sensors") },
                             onClick = {
@@ -332,7 +343,8 @@ private fun TopAppBar(
                     }
                 }
 
-                is Path.Settings, is Path.About, is Path.BindingMethod, is Path.QrCode, is Path.Unlocated, null -> {}
+                is Path.Settings, is Path.About, is Path.Garage, is Path.BindingMethod,
+                is Path.QrCode, is Path.Unlocated, null -> {}
             }
         },
         modifier = modifier

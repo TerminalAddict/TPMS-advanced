@@ -20,9 +20,9 @@ import kotlinx.serialization.json.Json
 import java.io.Writer
 import java.util.UUID
 
-public data class StorageCounts(val readings: Long, val events: Long, val reports: Long)
+public data class StorageCounts(val readings: Long, val events: Long, val reports: Long, val healthDays: Long = 0)
 public data class RetentionPlan(val readingsBefore: Double, val eventsBefore: Double, val reportsBefore: Double,
-    val counts: StorageCounts)
+    val counts: StorageCounts, val healthBeforeDay: Long = 0)
 
 /** Append-only identities; binding changes never rewrite old readings, event labels or ride summaries. */
 public class MonitoringHistory(private val database: Database, private val context: Context) {
@@ -120,7 +120,8 @@ public class MonitoringHistory(private val database: Database, private val conte
     } }
     public suspend fun counts(): StorageCounts = withContext(Dispatchers.IO) { mutex.withLock {
         recover(); StorageCounts(database.tyreQueries.countReadings().executeAsOne(),
-            queries.countEvents().executeAsOne(), queries.countRides().executeAsOne())
+            queries.countEvents().executeAsOne(), queries.countRides().executeAsOne(),
+            database.sensorLibraryQueries.healthCount().executeAsOne())
     } }
     public fun bytes(): Long = listOf("car.db", "car.db-wal", "car.db-shm").sumOf {
         context.getDatabasePath(it).length() }
@@ -133,28 +134,34 @@ public class MonitoringHistory(private val database: Database, private val conte
             val readingCutoff = minOf(cutoff(settings.readingDays), earliestRide)
             val eventsCutoff = minOf(cutoff(settings.eventDays), earliestRide)
             val reportsCutoff = cutoff(settings.reportDays)
+            val healthBeforeDay = (cutoff(settings.sensorHealthDays) / 86400).toLong()
             RetentionPlan(readingCutoff, eventsCutoff, reportsCutoff, oldCounts(readingCutoff, eventsCutoff,
-                reportsCutoff))
+                reportsCutoff, healthBeforeDay), healthBeforeDay)
         }
     }
-    private fun oldCounts(readings: Double, events: Double, reports: Double) = StorageCounts(
+    private fun oldCounts(readings: Double, events: Double, reports: Double, healthBeforeDay: Long) = StorageCounts(
         database.tyreQueries.countOldReadings(readings).executeAsOne(), queries.countOldEvents(events).executeAsOne(),
-        queries.countOldRides(reports).executeAsOne())
+        queries.countOldRides(reports).executeAsOne(), database.sensorLibraryQueries.oldHealthCount(healthBeforeDay)
+            .executeAsOne())
 
     public suspend fun cleanup(plan: RetentionPlan): Unit = withContext(Dispatchers.IO) { mutex.withLock {
         recover()
         database.transaction {
             check(queries.openRides().executeAsList().isEmpty()) { "Stop monitoring before cleaning up history." }
-            require(oldCounts(plan.readingsBefore, plan.eventsBefore, plan.reportsBefore) == plan.counts) {
+            val currentCounts = oldCounts(plan.readingsBefore, plan.eventsBefore, plan.reportsBefore,
+                plan.healthBeforeDay)
+            require(currentCounts == plan.counts) {
                 "Stored data changed. Review a fresh cleanup preview."
             }
             database.tyreQueries.pruneReadings(plan.readingsBefore)
             queries.pruneEvents(plan.eventsBefore)
             queries.pruneRides(plan.reportsBefore)
+            database.sensorLibraryQueries.pruneHealth(plan.healthBeforeDay)
         }
     } }
 
     /** Export never deletes. A provider error or cancelled picker leaves all original records intact. */
+    @Suppress("CyclomaticComplexMethod") // Four independently paged record types stay in one read transaction.
     public suspend fun archive(plan: RetentionPlan, writer: Writer): Unit = withContext(Dispatchers.IO) {
         mutex.withLock {
         recover()
@@ -162,6 +169,20 @@ public class MonitoringHistory(private val database: Database, private val conte
             check(queries.openRides().executeAsList().isEmpty()) { "Stop monitoring before archiving history." }
             fun row(values: Map<String, String>) { writer.write(Json.encodeToString(values) + "\n") }
             row(mapOf("type" to "TyrePing archive", "version" to "1", "units" to "raw kPa and Celsius"))
+            var healthOffset = 0L
+            do {
+                val health = database.sensorLibraryQueries.oldHealth(plan.healthBeforeDay, PAGE, healthOffset)
+                    .executeAsList()
+                health.forEach { row(mapOf("type" to "sensorHealthDay",
+                    "sensor" to it.sensorId.toInt().toUInt().toString(),
+                    "utcDay" to it.day.toString(), "packets" to it.packets.toString(),
+                    "rssiTotal" to it.rssiTotal.toString(), "rssiCount" to it.rssiCount.toString(),
+                    "voltageTotal" to it.voltageTotal.toString(), "voltageCount" to it.voltageCount.toString(),
+                    "percentTotal" to it.percentTotal.toString(), "percentCount" to it.percentCount.toString(),
+                    "observedSeconds" to it.observedSeconds.toString(), "missed" to it.missed.toString(),
+                    "longestGapSeconds" to it.longestGap.toString(), "questionable" to it.questionable.toString())) }
+                healthOffset += health.size
+            } while (health.size == PAGE.toInt())
             var offset = 0L
             do {
                 val rows = database.tyreQueries.oldReadings(plan.readingsBefore, PAGE, offset).executeAsList()

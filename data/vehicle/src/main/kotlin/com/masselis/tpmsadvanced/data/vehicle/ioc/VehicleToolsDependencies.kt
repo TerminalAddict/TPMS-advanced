@@ -25,6 +25,14 @@ public interface VehicleToolsDependencies {
     public val rideTools: com.masselis.tpmsadvanced.data.vehicle.interfaces.RideToolsStore
     public val maintenanceMode: com.masselis.tpmsadvanced.data.vehicle.interfaces.MaintenanceMode
     public val monitoringHistory: com.masselis.tpmsadvanced.data.vehicle.interfaces.MonitoringHistory
+    public val sensorLibrary: com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorLibrary
+
+    @Provides
+    @SingleIn(AppScope::class)
+    private fun sensorLibrary(database: Database,
+        rideTools: com.masselis.tpmsadvanced.data.vehicle.interfaces.RideToolsStore):
+        com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorLibrary =
+        com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorLibrary(database, rideTools)
 
     @Provides
     @SingleIn(AppScope::class)

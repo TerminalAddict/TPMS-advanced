@@ -37,6 +37,7 @@ internal fun StorageRetentionDialog(dismiss: () -> Unit) {
     var readings by remember { mutableStateOf(initial.readingDays.toString()) }
     var events by remember { mutableStateOf(initial.eventDays.toString()) }
     var reports by remember { mutableStateOf(initial.reportDays.toString()) }
+    var healthDays by remember { mutableStateOf(initial.sensorHealthDays.toString()) }
     var counts by remember { mutableStateOf(StorageCounts(0, 0, 0)) }
     var bytes by remember { mutableStateOf(0L) }
     var plan by remember { mutableStateOf<RetentionPlan?>(null) }
@@ -71,22 +72,27 @@ internal fun StorageRetentionDialog(dismiss: () -> Unit) {
     MonitoringToolDialog("Storage and retention", dismiss) {
         Text("Database: %.2f MB (including journal)".format(bytes / 1048576.0))
         Text("${counts.readings} readings · ${counts.events} alert events · ${counts.reports} ride reports")
+        Text("${counts.healthDays} daily sensor-health summaries. Inventory and installation history are preserved; " +
+            "diagnostic issue groups are capped at 1000.")
         Text("Keep records for this many days (0 = keep everything). Cleanup is manual after preview. " +
             "Active alerts, active rides and the latest readings of assigned sensors are protected.")
         OutlinedTextField(readings, { readings = it; plan = null }, label = { Text("Reading days (0–3650)") })
         OutlinedTextField(events, { events = it; plan = null }, label = { Text("Alert history days (0–3650)") })
         OutlinedTextField(reports, { reports = it; plan = null }, label = { Text("Ride report days (0–3650)") })
-        Button(enabled = !busy && listOf(readings, events, reports).all { it.toIntOrNull() in 0..3650 }, onClick = {
+        OutlinedTextField(healthDays, { healthDays = it; plan = null },
+            label = { Text("Sensor-health days (0–3650)") })
+        Button(enabled = !busy && listOf(readings, events, reports, healthDays).all { it.toIntOrNull() in 0..3650 },
+            onClick = {
             run {
                 tools.rideTools.update { it.copy(monitoring = it.monitoring.copy(readingDays = readings.toInt(),
-                    eventDays = events.toInt(), reportDays = reports.toInt())) }
+                    eventDays = events.toInt(), reportDays = reports.toInt(), sensorHealthDays = healthDays.toInt())) }
                 plan = tools.monitoringHistory.plan(tools.rideTools.read().monitoring, now())
                 message = "Limits saved. Review the records below before deleting."
             }
         }) { Text("Save limits and preview") }
         plan?.let { preview ->
             Text("Eligible: ${preview.counts.readings} readings, ${preview.counts.events} alerts, " +
-                "${preview.counts.reports} reports")
+                "${preview.counts.reports} reports, ${preview.counts.healthDays} daily sensor-health summaries")
             TextButton(enabled = !busy, onClick = {
                 exportPlan = preview; archive.launch("TyrePing-history-archive.jsonl")
             }) { Text("Archive eligible records…") }

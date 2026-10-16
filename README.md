@@ -56,6 +56,12 @@ TyrePing builds on the core capabilities of TPMS Advanced:
 - Guided sensor replacement that retains old readings and sensor identities
 - Vehicle-specific secondary alert routing, with priority for the monitored vehicle and selected trailer
 - Database usage, configurable retention windows, JSONL archiving and previewed manual cleanup
+- Sensor inventory and spare library with manufacturer notes, battery, last seen and installation history
+- Persistent daily sensor-health summaries for battery trends, reception strength and observed gaps
+- Garage / Fleet overview with all vehicles, tyre conditions, freshness and outstanding warnings
+- Handbook tyre sizes and load-specific cold-pressure recommendations, compared with alert profiles
+- Visible questionable-reading diagnostics, including malformed packets and unexpected sensor-ID changes
+- Manual GitHub update checker with stable/pre-release channels, release notes and signed APK links
 - Saved towing combinations with a combined vehicle/trailer dashboard and independent alert limits
 - Configurable left/right pressure imbalance warnings for matching tyres on each axle
 - Reception statistics with RSSI, packet counts and optional expected-broadcast estimates
@@ -91,6 +97,47 @@ For a double axle trailer, choose **Double axle trailer** when adding a vehicle.
 the front: assign front-left/right sensors to the axle nearest the hitch and rear-left/right
 sensors to the other axle. Four-sensor QR kits retain all four positions. Separate front/rear
 pressure limits are available for the two axles.
+
+### Sensor library, fleet and reference tools (features 52, 53, 55, 57–59)
+
+Open **Menu → Garage / Fleet** for all registered vehicles and their last known tyre conditions.
+Freshness and warnings are shown per wheel; sleeping sensors remain unconfirmed. **Open vehicle**
+is a manual selection and retains the existing automatic-selection override. This page reuses fleet
+observations and does not start another Bluetooth scanner. Existing vehicle diagrams remain on the
+individual dashboard.
+
+**Settings → Sensor inventory and health** lists assigned sensors and unassigned spares. Recognised
+BLE broadcasts add entries while scanning; add a labelled spare manually by decimal or hexadecimal
+ID. Record manufacturer and notes, review assignments, move a sensor to a wheel with confirmation,
+or return it to the spare library. Removal, replacement, rotation and vehicle deletion retain its
+inventory and installation snapshots. Existing assignments are recorded at upgrade with their earlier
+installation dates explicitly unknown. Battery and last-seen values come from received packets.
+
+Sensor details show persistent daily summaries across 30, 90 or 365 days. Battery trends retain the
+reported unit; voltage is never converted into percentage. At least three observed days spanning a
+week are needed for a trend. Known broadcast intervals can enable missed-broadcast estimates;
+radio downtime and process restarts are excluded. Sleeping/parked sensors can still produce gaps
+while scanning, and signal changes may reflect distance/interference rather than sensor failure.
+Daily summaries start with this version; historic raw readings do not establish scan availability.
+**Storage and retention** can archive/clean up old daily summaries, defaulting to keep everything.
+
+**Manufacturer tyre specifications** stores handbook/placard sources, tyre sizes, load conditions
+and cold pressures in your selected pressure unit. Comparisons show whether recommended targets
+fall inside the current and saved profile limits. These are references: saving/editing them never
+applies a profile or changes alert thresholds. Configuration backup includes specifications and
+spare metadata; reception and installation histories remain local, like other reading history.
+
+**Questionable sensor readings** records implausible fields, possible TPMS packets that failed decoding
+and changing IDs at the same Bluetooth address. Finite extreme values still reach ordinary alerts;
+zero pressure is valid. Unreadable/non-finite packets cannot become usable readings and leave explicit
+diagnostic evidence. Bindings never change automatically. The latest 200 issue groups can be viewed
+and exported as JSONL, with a bounded store of 1000 groups; exports include sensor identifiers.
+
+**About → Check for TyrePing updates** (also in Settings) contacts GitHub only when you press **Check now**.
+Choose stable releases or include pre-releases, read notes and open the matching signed APK in your
+browser. It does not install updates automatically. Signed TyrePing and Debug are separate apps.
+The checker uses the [GitHub Releases API](https://docs.github.com/en/rest/releases/releases#list-releases)
+and compares version numbers without suggesting a downgrade.
 
 ### Monitoring tools (features 41–49)
 

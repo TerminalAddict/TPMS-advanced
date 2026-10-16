@@ -7,6 +7,28 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 internal class ConfigurationBackupTest {
+    @Test fun `spare metadata and handbook recommendations round trip without altering profiles`() {
+        val base = backup()
+        val vehicle = base.vehicles.single()
+        val spec = TyreSpecification(load = "Towing", frontSize = "225/65R17", frontKpa = 240f,
+            rearKpa = 300f, source = "Handbook p42")
+        val profile = PressureProfile(name = "Solo", low = 180f, high = 260f)
+        val complete = base.copy(sensorLibrary = listOf(SensorMetadata(-1, "Spare", "Maker", "In toolbox")),
+            settings = base.settings.copy(rideTools = RideToolsData(insights = DrivingInsights(
+                broadcastSeconds = mapOf(-1 to 60)), vehicles = mapOf(vehicle.uuid to
+                VehicleRideTools(profiles = listOf(profile), specifications = listOf(spec))))))
+        assertEquals(complete, ConfigurationBackup.decode(complete.encode()))
+        assertEquals(vehicle, complete.vehicles.single())
+        assertFailsWith<IllegalArgumentException> {
+            complete.copy(sensorLibrary = complete.sensorLibrary + complete.sensorLibrary).validate()
+        }
+        val retained = UUID.randomUUID().toString()
+        val old = RideToolsData(vehicles = mapOf(retained to VehicleRideTools(specifications = listOf(spec))))
+        val merged = mergeRideTools(old, complete.settings.rideTools, listOf(vehicle.uuid))
+        assertEquals(listOf(spec), merged.vehicles[retained]?.specifications)
+        assertEquals(listOf(profile), merged.vehicles[vehicle.uuid]?.profiles)
+    }
+
     @Test fun `monitoring settings round trip validate vehicle references and merge parked routes`() {
         val base = backup()
         val id = base.vehicles.single().uuid

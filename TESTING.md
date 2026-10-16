@@ -1,5 +1,67 @@
 # Combined feature-batch testing
 
+## Features 52, 53, 55, 57–59 — sensor library and fleet debug checkpoint
+
+Branch: `codex/sensor-library-and-fleet-health`, based on v0.11.0. Schema 12 / migration 11 adds
+sensor inventory, installation snapshots, daily health aggregates and diagnostic issue records.
+Existing dashboards, vehicle artwork, readings, profiles and monitoring tools are retained.
+
+```powershell
+adb install -r "D:\TyrePing-Releases\debug\TyrePing-sensor-library-fleet-debug.apk"
+```
+
+Phone checks (pending):
+
+1. **Inventory:** upgrade an existing Debug installation with assigned and historical sensors. Check
+   Settings → Sensor inventory and health shows both. Add a spare by decimal and hex ID; enter label,
+   manufacturer, notes and optional broadcast interval. Search/filter spares, restart and verify details.
+   Discovery of a recognised unassigned sensor should add it without assigning it. Unknown BLE devices
+   stay in Discover sensors. Verify battery units and last seen from actual packets, including repeats.
+2. **Assignments:** assign a spare, replace a bound sensor, move between vehicles, swap/rotate and return
+   a sensor to spares. Cancel confirmations first. Change a binding while a confirmation is open to
+   exercise stale-review rejection. Check old reading identity, calibration and installation snapshots.
+   Delete a disposable extra vehicle: its sensors should remain in inventory, with ended installations.
+3. **Health:** use a known interval and simulated or real repeated packets. Check counts, RSSI and daily
+   battery averages; turn Bluetooth off, close scanning and restart to verify downtime is excluded.
+   Keep collecting across days to test real trends; one session must not claim long-term deterioration.
+   Compare 30/90/365-day summaries. Battery replacements and changes of temperature/mounting need interpretation.
+   Confirm Storage and retention counts daily summaries and can preview/archive/clean older summaries,
+   without changing inventory, assignments, installation history or current readings.
+4. **Garage:** Menu → Garage / Fleet. Create a car, motorcycle and trailer with different readings.
+   Check warning filter, stale/unseen/missing states, units, battery, maintenance notices and advancing ages.
+   Open a vehicle and confirm manual selection wins over accessory selection. Repeat in large fonts,
+   landscape, TalkBack and high visibility. Return to the individual dashboard: diagrams must remain.
+5. **Handbook:** save Solo and Towing recommendations with tyre sizes and source/page. Check pressure
+   units, edit/remove, profile comparison and restart. Saving a target must never change alert limits.
+   Reject blank required fields, non-finite or nonpositive pressures. Round-trip a backup with these
+   recommendations and spare metadata; old backups must still import.
+6. **Questionable readings:** test supported packets with impossible temperature/negative or extreme pressure,
+   malformed/truncated/invalid checksum packets and a changing sensor ID at the same address. Inspect the
+   discovery warning and Settings → Questionable sensor readings, including packet export (valid JSON per line).
+   A zero-pressure reading must still trigger its ordinary warning. Finite high pressure/hot readings still
+   reach alerts, even if also flagged as implausible. Bindings must not change. Restart preserves evidence.
+   A good packet clears the current value warning; past diagnostic evidence remains visible.
+7. **Updates:** About → Check for TyrePing updates. Check stable and include-pre-release channels against
+   GitHub. Confirm release notes and correct APK links, no downgrade from a newer installed build, and the
+   separate-Debug-app explanation. Try airplane mode, retry, channel switch and a phone without a browser.
+   No network check or installation should occur merely by opening About/the update dialog.
+8. **Regression:** repeat core monitoring, maintenance expiry, Quick Settings, live notifications, towing,
+   discovery/QR, sensor replacement, history, Android Auto, widget and all vehicle-diagram checks below.
+
+Host validation: **247 Kotlin/JVM tests** (data 113, main 75, background 47, Android Auto 2,
+QR 8, phone 2), **23 host SQLite checks**, SQLDelight migration verification, debug assembly
+and Android lint (0 errors; 19 existing warnings). Inspected the new large-font Garage render;
+existing vehicle layout regressions pass. Data and phone Detekt pass; main retains its 13 existing
+MagicNumber findings in AlertSlider/TyreStat, with no new findings or baseline changes.
+Physical-device and multi-week sensor observations remain pending.
+
+The APK updates **TyrePing Debug** (`nz.paulwillard.tyreping.debug`) while retaining its data.
+Its version is 0.11.0 / 1100000, minimum API 28, target API 37. Signed TyrePing is a separate app.
+The adjacent `.apk.sha256` file records the delivered APK's SHA-256 checksum.
+Delivered APK: 92,332,211 bytes; SHA-256
+`8036e62c928d935dacee9cac3602739631eb7b544ee6c7f4059ef8ac23bc05f7`.
+APK v2 signature verified against the existing TyrePing Debug certificate.
+
 ## Features 41–49 — monitoring tools debug checkpoint
 
 Branch: `codex/monitoring-controls-and-ride-reports`, based on v0.10.0. This batch retains features

@@ -58,6 +58,7 @@ public object RideRuntime {
 public object FleetHealth {
     private const val REFRESH_MS = 5_000L
     private const val MINUTE_MS = 60_000L
+    private const val QUALITY_FRESH_SECONDS = 120.0
     private val deps get() = appGraph as VehicleToolsDependencies
     private val tracker = MissingSensorTracker()
     private val liveLeaks = java.util.concurrent.ConcurrentHashMap<String, Tyre.Located>()
@@ -83,6 +84,7 @@ public object FleetHealth {
         deps.maintenanceMode.expire()
         scanNotice.value = scanWarning(deps.toolsScanner.scanStatus.value, RideRuntime.started.value != null)
         val settings = deps.rideTools.read()
+        val questionable = recentQualityWarnings()
         val raw = deps.toolsVehicles.selectAll().execute().associateWith { vehicle ->
             vehicle.kind.locations.associateWith { location ->
                 val bound = deps.toolsSensors.selectByVehicleAndLocation(vehicle.uuid, location).execute()
@@ -108,9 +110,10 @@ public object FleetHealth {
                     liveLeaks["${vehicle.uuid}:$location"]?.takeIf { leak ->
                         leak.sensorId == it.sensorId && leak.timestamp == it.timestamp
                     }?.pressureLoss ?: it.pressureLoss) }
-                wheelHealth(vehicle, location, reading, now(), tyre?.let {
+                val health = wheelHealth(vehicle, location, reading, now(), tyre?.let {
                     key(vehicle.uuid, location, it.sensorId) in missing
                 } == true)
+                withQualityWarning(health, tyre?.sensorId?.let { questionable[it] })
             }, settings.vehicles[vehicle.uuid.toString()]?.reminder?.takeIf {
                 it.isDue(java.time.LocalDate.now())
             }?.label)
@@ -140,6 +143,15 @@ public object FleetHealth {
     /** Phone, car host and service can observe together without duplicating the polling loop. */
     public suspend fun observe(): Unit = observations.collect { }
     private fun key(id: UUID, location: Location, sensor: Int) = "$id:$location:$sensor"
+
+    private suspend fun recentQualityWarnings(): Map<Int, String> = deps.sensorLibrary.inventory().mapNotNull {
+        item -> item.warning?.takeIf { item.warningAt?.let { time ->
+            now() - time in 0.0..QUALITY_FRESH_SECONDS } == true }?.let { item.id.toInt() to it }
+    }.toMap()
+
+    private fun withQualityWarning(health: WheelHealth, issue: String?): WheelHealth = if (issue == null) health
+        else health.copy(warnings = health.warnings + "Questionable reading: $issue",
+            state = if (health.state == WheelReadiness.HEALTHY) WheelReadiness.WARNING else health.state)
 }
 
 private fun scanWarning(status: ScanStatus, monitoring: Boolean): String? = when (status) {

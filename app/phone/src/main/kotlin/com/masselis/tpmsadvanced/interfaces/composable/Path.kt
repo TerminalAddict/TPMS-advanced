@@ -21,6 +21,11 @@ internal sealed interface Path {
     }
 
     @JvmInline
+    value class Garage(val vehicleUUID: UUID) : Path {
+        override fun toString(): String = "vehicle/$vehicleUUID/garage"
+    }
+
+    @JvmInline
     value class BindingMethod(val vehicleUUID: UUID) : Path {
         override fun toString(): String = "vehicle/$vehicleUUID/binding_method"
     }
@@ -46,6 +51,7 @@ internal sealed interface Path {
                     "home" -> Home(uuid)
                     "settings" -> Settings(uuid)
                     "about" -> About(uuid)
+                    "garage" -> Garage(uuid)
                     "binding_method" -> BindingMethod(uuid)
                     "qrcode" -> QrCode(uuid)
                     "unlocated" -> Unlocated(uuid)
