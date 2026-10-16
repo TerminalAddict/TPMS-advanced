@@ -50,3 +50,22 @@ SELECT id, timestamp, rssi, location, pressure, temperature, battery, isAlarm, b
 WHERE id = ? AND location = ? AND vehicleId = ?
 ORDER BY timestamp DESC
 LIMIT 1;
+
+countReadings:
+SELECT COUNT(*) FROM Tyre;
+
+countOldReadings:
+SELECT COUNT(*) FROM Tyre WHERE timestamp < :cutoff
+AND NOT EXISTS (SELECT 1 FROM Sensor s WHERE s.id = Tyre.id AND s.vehicleId = Tyre.vehicleId
+AND Tyre.timestamp = (SELECT MAX(t.timestamp) FROM Tyre t WHERE t.id = s.id AND t.vehicleId = s.vehicleId));
+
+oldReadings:
+SELECT * FROM Tyre WHERE timestamp < :cutoff
+AND NOT EXISTS (SELECT 1 FROM Sensor s WHERE s.id = Tyre.id AND s.vehicleId = Tyre.vehicleId
+AND Tyre.timestamp = (SELECT MAX(t.timestamp) FROM Tyre t WHERE t.id = s.id AND t.vehicleId = s.vehicleId))
+ORDER BY rowid LIMIT :pageSize OFFSET :pageOffset;
+
+pruneReadings:
+DELETE FROM Tyre WHERE timestamp < :cutoff
+AND NOT EXISTS (SELECT 1 FROM Sensor s WHERE s.id = Tyre.id AND s.vehicleId = Tyre.vehicleId
+AND Tyre.timestamp = (SELECT MAX(t.timestamp) FROM Tyre t WHERE t.id = s.id AND t.vehicleId = s.vehicleId));

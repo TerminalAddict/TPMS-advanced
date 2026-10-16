@@ -19,7 +19,7 @@ public class TyreDatabase internal constructor(
         historyPage(vehicleId, from, until, HISTORY_LIMIT + 1L, 0)
     }
 
-    private fun historyPage(vehicleId: UUID, from: Double, until: Double, limit: Long,
+    internal fun historyPage(vehicleId: UUID, from: Double, until: Double, limit: Long,
         offset: Long): List<Tyre.Located> =
         queries.historyPage(vehicleId, from, until, limit, offset) {
                 id, timestamp, rssi, location, pressure, temperature, battery, isAlarm, voltage, percent ->

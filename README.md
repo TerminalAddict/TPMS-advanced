@@ -49,6 +49,13 @@ TyrePing builds on the core capabilities of TPMS Advanced:
 - Home-screen widget with pressures, temperatures, monitoring snapshot and advancing age counters
 - Per-wheel tyre maintenance history with date/mileage reminders
 - Optional spoken monitoring diagnostics including Bluetooth and scan-failure reasons
+- Quick Settings tile and an optional ongoing notification with live readings and freshness
+- Timed per-vehicle inflation / maintenance mode, with temperature and battery warnings retained
+- Trusted pressure-gauge comparison and an explicitly reviewed sensor-offset suggestion
+- Persistent ride summaries and searchable alert event history, including interruptions and acknowledgements
+- Guided sensor replacement that retains old readings and sensor identities
+- Vehicle-specific secondary alert routing, with priority for the monitored vehicle and selected trailer
+- Database usage, configurable retention windows, JSONL archiving and previewed manual cleanup
 - Saved towing combinations with a combined vehicle/trailer dashboard and independent alert limits
 - Configurable left/right pressure imbalance warnings for matching tyres on each axle
 - Reception statistics with RSSI, packet counts and optional expected-broadcast estimates
@@ -84,6 +91,39 @@ For a double axle trailer, choose **Double axle trailer** when adding a vehicle.
 the front: assign front-left/right sensors to the axle nearest the hitch and rear-left/right
 sensors to the other axle. Four-sensor QR kits retain all four positions. Separate front/rear
 pressure limits are available for the two axles.
+
+### Monitoring tools (features 41–49)
+
+Open **Settings → Monitoring controls** to start or stop monitoring, or add the **TyrePing** Quick
+Settings tile from Settings. The tile opens those controls and distinguishes active, suspended,
+waiting and stopped monitoring. **Live tyre status notification** is optional and refreshes roughly
+every five seconds while the service runs; the required foreground-service notification remains.
+
+**Settings → Monitoring tools** contains per-vehicle maintenance mode (1–60 minutes), secondary
+vehicle alert routing, ride reports, alert event history, and storage/retention. Maintenance suppresses
+pressure, leak, imbalance and missing-sensor delivery while preserving temperature and battery
+warnings. It expires automatically, survives an app-process restart and ends on a phone reboot.
+The dashboard shows when maintenance is active; end it before riding.
+
+Tap an assigned wheel for **Compare with pressure gauge** or **Replace sensor**. Gauge comparison
+captures a raw reading and requires it to be less than two minutes old before applying an offset.
+It preserves the multiplier and temperature calibration. Replacement confirms both sensor identities
+and any conflicting assignment; old readings remain associated with the old sensor.
+
+Ride reports follow actual background-monitoring sessions, including automatic ride triggers, with
+one report per vehicle in the towing combination selected at the start. They retain raw start/end
+pressures, changes, maximum temperatures, missing wheels, long gaps and alert counts, without GPS.
+Interrupted sessions end at their last saved heartbeat. Reports preserve their summaries if raw
+readings are later cleaned up. Alert history records observed conditions while the app is open or
+monitoring runs; identical active conditions update one event until they end or change severity.
+Dismissal acknowledges history and does not silence ongoing alarms.
+
+Retention defaults to **keep everything**. Choose days (0 = forever), preview, optionally export a
+JSON Lines archive, then confirm manual cleanup with monitoring stopped. Active events/rides and
+the newest readings for assigned sensors are protected. Archives are for offline analysis and are
+separate from configuration backup/restore. Freed database pages are reused, so cleanup may not
+immediately reduce the allocated file size. New persistent settings are included in configuration
+backups; temporary maintenance timers are not.
 
 ### Towing and sensor insights (features 31–38)
 

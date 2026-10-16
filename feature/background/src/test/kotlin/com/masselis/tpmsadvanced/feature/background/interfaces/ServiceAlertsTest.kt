@@ -20,6 +20,20 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 internal class ServiceAlertsTest {
+    @Test fun `maintenance suppresses pressure but retains heat and battery and expires without packets`() = runTest {
+        val maintenance = MutableStateFlow(false)
+        val reading = TyreAtmosphere(1.0, 1, 100f.kpa, 90f.celsius, SensorBattery.Percentage(5),
+            PressureLoss(10f.kpa, 0.0))
+        flowOf(listOf(Location.Axle.FRONT to reading)).alertStates(ranges, maintenance).test {
+            assertIs<State.PressureAlert>(awaitItem())
+            maintenance.value = true
+            assertIs<State.TemperatureAlert>(awaitItem())
+            temp.value = 100f.celsius
+            assertIs<State.BatteryAlert>(awaitItem())
+            maintenance.value = false
+            assertIs<State.PressureAlert>(awaitItem())
+        }
+    }
     private val low = MutableStateFlow(200f.kpa)
     private val high = MutableStateFlow(300f.kpa)
     private val temp = MutableStateFlow(80f.celsius)

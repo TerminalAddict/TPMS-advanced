@@ -42,25 +42,33 @@ internal fun SensorManagementDialog(vehicle: Vehicle, location: Location, dismis
         .collectAsState(emptyList())
     val bound = bindings.firstOrNull { it.location == location }
     var calibrate by remember { mutableStateOf(false) }
+    var gauge by remember { mutableStateOf(false) }
+    var replacing by remember { mutableStateOf<Sensor?>(null) }
     var scanning by remember { mutableStateOf(false) }
     var manual by remember { mutableStateOf("") }
     var candidates by remember { mutableStateOf<Map<Int, Pair<Tyre, Boolean>>>(emptyMap()) }
     var confirmation by remember { mutableStateOf<String?>(null) }
     var action by remember { mutableStateOf<(suspend () -> Unit)?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    var status by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
     fun confirm(text: String, run: suspend () -> Unit) { confirmation = text; action = run }
     fun assign(id: Int) {
+        val old = replacing ?: bound
+        if (replacing?.id == id) { error = "Choose a different replacement sensor."; return }
         scope.launch {
             val (owner, source) = withContext(Dispatchers.IO) {
                 tools.toolsVehicles.selectBySensorId(id).execute() to tools.toolsSensors.selectById(id).execute()
             }
             confirm("Assign sensor ${id.toUInt()} to ${wheelLabel(location)} on ${vehicle.name}? " +
-                (if (bound != null) "This replaces sensor ${bound.id.toUInt()}. " else "") +
+                (if (old != null) "This replaces sensor ${old.id.toUInt()}. Its historical readings and identity " +
+                    "are kept. The new sensor uses its own calibration; the old calibration is not copied. " else "") +
                 (owner?.let { "It will be removed from its current wheel on ${it.name}." } ?: "")) {
-                tools.toolsSensors.assign(Sensor(id, location), vehicle.uuid, bound,
+                tools.toolsSensors.assign(Sensor(id, location), vehicle.uuid, old,
                     if (owner != null && source != null) owner.uuid to source else null)
+                replacing = null
+                status = "Sensor assigned. Previous readings remain in history."
             }
         }
     }
@@ -77,14 +85,29 @@ internal fun SensorManagementDialog(vehicle: Vehicle, location: Location, dismis
             catch (_: RuntimeException) { error = "Scanning stopped. Check Bluetooth and permissions, then try again." }
         }
     }
-    if (calibrate && bound != null) {
+    if (gauge && bound != null) {
+        GaugeComparisonDialog(vehicle, bound) { gauge = false }
+    } else if (calibrate && bound != null) {
         CalibrationEditor(bound.id, tools.toolsCalibration) { calibrate = false }
     } else AlertDialog(onDismissRequest = dismiss, title = { Text("${vehicle.name}: ${wheelLabel(location)}") },
         modifier = Modifier.testTag(BindSensorTags.Dialog.root),
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                bound?.let { sensor ->
+                replacing?.let { old ->
+                    Text("Replace sensor · Step 2 of 3", style = MaterialTheme.typography.titleMedium)
+                    Text("Old sensor ${old.id.toUInt()} stays assigned until you confirm its replacement. " +
+                        "Fit only the replacement sensor, then identify its broadcasts or enter its ID below. " +
+                        "Existing readings, vehicle settings and maintenance records are retained.")
+                    TextButton(onClick = { replacing = null; scanning = false }) { Text("Cancel replacement") }
+                }
+                bound?.takeIf { replacing == null }?.let { sensor ->
                     Text("Assigned sensor: ${sensor.id.toUInt()}")
+                    TextButton(onClick = { confirm("Replace sensor ${sensor.id.toUInt()} on ${wheelLabel(location)}? " +
+                        "Step 1 of 3: review the old sensor. Next, identify its replacement. " +
+                        "Use maintenance mode while removing and fitting sensors.") {
+                        replacing = sensor; scanning = true; candidates = emptyMap(); manual = ""
+                    } }) { Text("Replace sensor…") }
+                    TextButton(onClick = { gauge = true; scanning = false }) { Text("Compare with pressure gauge") }
                     TextButton(onClick = { calibrate = true }) { Text("Calibrate sensor") }
                     TextButton(onClick = { confirm("Remove sensor ${sensor.id.toUInt()} from this wheel?") {
                         tools.toolsSensors.unbind(vehicle.uuid, location)
@@ -135,6 +158,7 @@ internal fun SensorManagementDialog(vehicle: Vehicle, location: Location, dismis
                 TextButton(enabled = id != null, onClick = { id?.let(::assign) },
                     modifier = Modifier.testTag(BindSensorTags.Dialog.assign)) { Text("Assign entered ID…") }
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                status?.let { Text(it) }
             }
         }, confirmButton = {
             TextButton(onClick = dismiss, modifier = Modifier.testTag(BindSensorTags.Dialog.done)) { Text("Done") }
@@ -146,7 +170,7 @@ internal fun SensorManagementDialog(vehicle: Vehicle, location: Location, dismis
                 val pending = action
                 confirmation = null
                 scope.launch {
-                    try { pending?.invoke(); scanning = false }
+                    try { scanning = false; pending?.invoke() }
                     catch (cancelled: CancellationException) { throw cancelled }
                     catch (failure: RuntimeException) { error = failure.message ?: "Sensor change could not be saved." }
                 }

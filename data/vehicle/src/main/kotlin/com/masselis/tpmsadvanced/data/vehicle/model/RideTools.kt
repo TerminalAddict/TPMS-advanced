@@ -82,9 +82,11 @@ public data class RideToolsData(
     val missingEnabled: Boolean = true, val missingMinutes: Int = 10,
     val automaticSelection: Boolean = false, val spokenDiagnostics: Boolean = false,
     val insights: DrivingInsights = DrivingInsights(),
+    val monitoring: MonitoringTools = MonitoringTools(),
 ) {
     public fun validate() {
         insights.validate()
+        monitoring.validate()
         require(vehicles.size <= 100 && missingMinutes in 1..60)
         require(vehicles.values.sumOf { it.records.size } <= 1000)
         vehicles.forEach { (id, value) -> require(UUID.fromString(id).toString() == id); value.validate() }
@@ -101,6 +103,8 @@ public fun mergeRideTools(previous: RideToolsData, imported: RideToolsData, repl
     val retained = previous.insights.combinations.filter { it.vehicle !in replaced && it.trailer !in replaced }
         .filter { old -> imported.insights.combinations.none { it.id == old.id || it.name.equals(old.name, true) } }
     return imported.copy(vehicles = previous.vehicles.filterKeys { it !in replaced } + imported.vehicles,
+        monitoring = imported.monitoring.copy(parkedRoutes =
+            previous.monitoring.parkedRoutes.filterKeys { it !in replaced } + imported.monitoring.parkedRoutes),
         insights = imported.insights.copy(combinations = retained + imported.insights.combinations,
             imbalanceKpa = previous.insights.imbalanceKpa.filterKeys { it !in replaced } +
                 imported.insights.imbalanceKpa,

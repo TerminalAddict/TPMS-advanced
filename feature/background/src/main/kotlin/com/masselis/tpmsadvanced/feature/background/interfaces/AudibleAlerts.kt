@@ -24,6 +24,8 @@ import kotlinx.coroutines.launch
 /** Both the visible screen and the service use this engine; only one owns it at a time. */
 internal suspend fun audibleAlerts(component: VehicleComponent): Unit = coroutineScope {
     val openedAt = now()
+    val maintenance = (com.masselis.tpmsadvanced.core.common.appGraph as
+        com.masselis.tpmsadvanced.data.vehicle.ioc.VehicleToolsDependencies).maintenanceMode
     val cues = MutableStateFlow<List<AlertCue>>(emptyList())
     val ranges = component.vehicleRangesUseCase
     val sources = component.vehicle.kind.locations.map { location ->
@@ -42,6 +44,8 @@ internal suspend fun audibleAlerts(component: VehicleComponent): Unit = coroutin
         while (isActive) {
             val options = AlertControls.options.value
             val live = cues.value.filter { it.receivedAt >= openedAt && now() - it.receivedAt in 0.0..STALE_SECONDS }
+                .filterNot { maintenance.active(component.vehicle.uuid) &&
+                    (":tyre pressure:" in it.key || ":possible tyre leak:" in it.key) }
             val muted = SystemClock.elapsedRealtime() < AlertControls.silencedUntil.value
             AlertControls.active.value = live.isNotEmpty() && options.enabled
             if (muted || !options.enabled || !live.map { it.key }.containsAll(playingKeys)) playback?.cancelAndJoin()

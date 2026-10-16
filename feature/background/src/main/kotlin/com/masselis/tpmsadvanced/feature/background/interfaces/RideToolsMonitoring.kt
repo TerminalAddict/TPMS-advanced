@@ -18,6 +18,7 @@ import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.Scan
 import com.masselis.tpmsadvanced.data.vehicle.model.WheelReadiness
 import com.masselis.tpmsadvanced.data.vehicle.model.automaticVehicleCandidate
 import com.masselis.tpmsadvanced.feature.background.R
+import com.masselis.tpmsadvanced.feature.main.usecase.monitoringEvents
 import com.masselis.tpmsadvanced.feature.main.usecase.FleetHealth
 import com.masselis.tpmsadvanced.feature.main.usecase.RideRuntime
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -179,42 +180,42 @@ private fun refreshFleetWarnings(manager: NotificationManagerCompat, channel: St
     val fleet = FleetHealth.values.value
     val cues = mutableListOf<AlertCue>()
     val activeIds = mutableSetOf<Int>()
+    val deps = appGraph as VehicleToolsDependencies
+    val settings = deps.rideTools.read()
+    val primary = MonitorService.activeVehicle.value
+    val trailer = primary?.let { settings.insights.activeFor(it,
+        fleet.associate { health -> health.vehicle.uuid.toString() to health.vehicle.kind })?.trailer }
     fleet.forEach { health ->
-        val missing = health.wheels.filter { it.state == WheelReadiness.MISSING }
-        val secondary = health.vehicle.uuid != MonitorService.activeVehicle.value
-        val alerts = health.wheels.filter { it.state == WheelReadiness.WARNING && secondary &&
-            (it.reading?.timestamp ?: 0.0) >= (RideRuntime.started.value ?: Double.MAX_VALUE) }
-        val imbalances = health.imbalances.filter { pair ->
-            !RideRuntime.parked.value && listOf(pair.left, pair.right).all { location ->
-                (health.wheels.firstOrNull { it.location == location }?.reading?.timestamp ?: 0.0) >=
-                    (RideRuntime.started.value ?: Double.MAX_VALUE)
-            }
-        }
-        val text = (missing.map { "${it.label}: sensor missing" } +
-            alerts.map { "${it.label}: ${it.warnings.joinToString()}" } +
-            imbalances.map { "${it.axle} axle: left/right pressure imbalance" }).joinToString("; ")
-        if (text.isNotEmpty()) {
+        val isPrimary = health.vehicle.uuid == primary
+        val active = isPrimary || health.vehicle.uuid.toString() == trailer
+        val route = settings.monitoring.parkedRoutes[health.vehicle.uuid.toString()]
+            ?: com.masselis.tpmsadvanced.data.vehicle.model.ParkedAlertRoute.ALL
+        val events = eligibleFleetEvents(health, isPrimary, deps.maintenanceMode.active(health.vehicle.uuid))
+            .map { it to com.masselis.tpmsadvanced.data.vehicle.model.alertDelivery(active, route, it.critical) }
+        val visible = events.filter { it.second.notification }.map { it.first }
+        events.filter { it.second.audible }.forEach { (event, _) -> cues += AlertCue(event.key,
+            "${event.vehicleName}. ${event.wheel.replace(':', ' ')}. ${event.kind}", event.critical, now()) }
+        if (visible.isNotEmpty()) {
+            val text = visible.joinToString("; ") { "${it.wheel.replace(':', ' ')}: ${it.kind}" }
             val id = health.vehicle.uuid.hashCode() xor FLEET_NOTIFICATION_MASK
             activeIds += id
             val intent = Intent(Intent.ACTION_VIEW, "tpmsadvanced://vehicle/${health.vehicle.uuid}".toUri())
                 .setPackage(appContext.packageName)
-            manager.notify(id, NotificationCompat.Builder(appContext,
-                channel).setSmallIcon(R.drawable.car_tire_alert)
+            manager.notify(id, NotificationCompat.Builder(appContext, channel).setSmallIcon(R.drawable.car_tire_alert)
                 .setContentTitle("${health.vehicle.name} · tyre warning").setContentText(text)
-                .setStyle(NotificationCompat.BigTextStyle().bigText(text))
-                .setOnlyAlertOnce(true).setSilent(true)
-                .setContentIntent(PendingIntent.getActivity(appContext, id, intent,
-                    PendingIntent.FLAG_IMMUTABLE))
+                .setStyle(NotificationCompat.BigTextStyle().bigText(text)).setOnlyAlertOnce(true).setSilent(true)
+                .setContentIntent(PendingIntent.getActivity(appContext, id, intent, PendingIntent.FLAG_IMMUTABLE))
                 .addAction(0, "Silence alerts for 10 min", PendingIntent.getBroadcast(appContext, id,
-                    Intent(appContext, SilenceAlertsReceiver::class.java),
-                        PendingIntent.FLAG_IMMUTABLE)).build())
-            (missing + alerts).forEach { wheel -> cues += AlertCue(
-                "${health.vehicle.uuid}:${wheel.label}:${wheel.state}",
-                "${health.vehicle.name}. ${wheel.label}. " + if (wheel.state == WheelReadiness.MISSING)
-                    "Sensor missing" else wheel.warnings.joinToString(), false, now()) }
-            imbalances.forEach { cues += AlertCue("${health.vehicle.uuid}:imbalance:${it.axle}",
-                "${health.vehicle.name}. ${it.axle} axle. Left and right tyre pressure imbalance.", false, now()) }
+                    Intent(appContext, SilenceAlertsReceiver::class.java), PendingIntent.FLAG_IMMUTABLE)).build())
         }
     }
     return activeIds to cues
+}
+
+private fun eligibleFleetEvents(health: com.masselis.tpmsadvanced.feature.main.usecase.VehicleHealth,
+    primary: Boolean, maintenance: Boolean) = health.monitoringEvents(maintenance).filter { event ->
+    val rideWarning = event.kind == "Sensor missing" || event.kind == "Left/right pressure imbalance"
+    val recent = health.wheels.any { wheel -> wheel.reading?.sensorId == event.sensor &&
+        (wheel.reading?.timestamp ?: 0.0) >= (RideRuntime.started.value ?: Double.MAX_VALUE) }
+    (!primary || rideWarning) && (recent || rideWarning) && (!rideWarning || !RideRuntime.parked.value)
 }

@@ -1,5 +1,89 @@
 # Combined feature-batch testing
 
+## Features 41–49 — monitoring tools debug checkpoint
+
+Branch: `codex/monitoring-controls-and-ride-reports`, based on v0.10.0. This batch retains features
+31–38, the van/ute artwork and the portrait diagram fix. It adds schema 11 through additive
+migration 10; existing vehicles, bindings, raw readings and calibration are preserved.
+
+```powershell
+adb install -r "D:\TyrePing-Releases\debug\TyrePing-features-41-49-debug.apk"
+```
+
+The separate **TyrePing Debug** app supports the ADB sensor simulator described below. This command
+updates an existing debug installation and retains its data. Signed TyrePing remains a separate app.
+
+Device checklist (not yet performed for this batch):
+
+1. **Quick Settings:** use Settings → Add Quick Settings tile, or edit Android's pull-down panel.
+   Tap TyrePing, select a vehicle, grant permissions and start monitoring. Check Active, Bluetooth-off
+   Suspended, automatic-watch Waiting, and Stopped. Test from the lock screen and after app restart.
+2. **Live notification:** enable the optional live tyre status notification. Send front/rear or four-wheel
+   readings and check units, vehicle, age and stale labels after two minutes. Change selected vehicle
+   while a different vehicle is monitored: notification readings must stay with the monitored vehicle.
+   Disable the option; the required monitoring notification must remain. Stop and check live status disappears.
+3. **Maintenance:** start a one-minute timer for one vehicle. Send low pressure, imbalance and missing
+   readings; those notifications/sounds pause, while hot and low-battery warnings still work. The dashboard
+   must say maintenance is active. Wait for expiry without another packet and check retained pressure warnings
+   resume. End manually, restart the app process during a timer, and reboot to verify the timer is cancelled.
+   A second vehicle must retain its normal alert behaviour.
+4. **Gauge:** tap an assigned wheel → Compare with pressure gauge. Capture fresh data, enter a trusted value
+   in the selected unit and review the difference. Cancel once; then apply the suggested offset. Multipliers
+   and temperature calibration must remain unchanged. Reject stale, alarm/zero-pressure and excessive values;
+   change the binding or calibration before confirmation to exercise the stale-form guard.
+5. **Reports:** start monitoring, send changing readings and alerts, then stop. Open the report prompt and
+   check duration, raw start/end pressures, maximum temperature, deltas and sensor IDs. Test no readings,
+   a gap longer than the missing timeout, a replacement mid-ride and a towing combination. Force-stop the
+   debug app during a ride and reopen: label it interrupted, ending at the last heartbeat. Test an actual
+   Bluetooth ride trigger when available. Foreground-only viewing does not create a ride report.
+6. **Alert history:** trigger pressure, temperature, battery, missing and imbalance events. Repeated packets
+   should update the same active condition; recovery or a severity change should end it. Search by vehicle,
+   wheel, severity and sensor ID; page older records. Dismiss an entry and check its timestamp persists after
+   restart. This acknowledgement must not silence an active warning. Stale readings must not be called healthy.
+7. **Replacement:** tap an assigned wheel → Replace sensor. Review the old ID, identify the replacement
+   through Bluetooth or enter its ID, then confirm. Cancel at each step first. Same-ID replacements are rejected;
+   a sensor already on another wheel requires explicit conflict confirmation. Old readings, vehicle thresholds,
+   profiles and maintenance records remain. The new sensor uses its own calibration, never the old sensor's.
+8. **Routing:** with two vehicles and a trailer, exercise all, notifications-only, critical-only and history-only
+   secondary routes. Enable audio to verify the difference. Active vehicle and selected trailer retain full
+   alerts and global silence controls; history remains recorded for every route. A normal low-pressure warning
+   must not pass critical-only unless it reaches the documented critical threshold.
+9. **Storage:** defaults retain everything. Set retention days, preview eligible records, cancel the export
+   picker, then export an archive. Export must not delete anything. Cancel cleanup, reopen and confirm it only
+   on disposable test data. The latest assigned readings, bindings, calibrations and open alerts survive.
+   Completed report summaries survive raw-reading cleanup. Active rides prevent cleanup. Test failed providers
+   and backup round-tripping of the new settings; temporary maintenance mode must not transfer to another phone.
+10. **Preservation:** check all vehicle diagrams in portrait with enlarged text/high visibility; landscape and
+    explicit card mode; double axle trailer and towing layouts; discovery, QR binding, calibration, profiles,
+    Android Auto, widget, backup/restore, About links and automatic scan recovery.
+
+Verified 16 October 2026:
+
+- **232 Kotlin/JVM tests passed:** data 99, main 74, background 47, Android Auto 2, phone 2, QR 8.
+  This includes the existing vehicle diagram regressions and a large-text maintenance dialog render.
+  Maintenance and van renders were visually inspected.
+- **14 host SQLite tests passed:** eight monitoring/migration/retention tests and six existing
+  configuration/history tests. Tests cover out-of-order latest readings, old sensor identity,
+  active-record protection, unsigned ID search and old-service/new-ride isolation.
+- SQLDelight migration verification passed. Final APK assembly and lint passed: **0 errors / 19
+  existing resource warnings**. Data/background Detekt pass; main has only its **13 pre-existing
+  MagicNumber findings** in AlertSlider/TyreStat. No baseline was changed.
+- APK v2 signature verified with the existing debug certificate. `git diff --check` passes.
+- No device installation or radio test performed. ADB could not start its local daemon during
+  the device check; this did not affect building or offline APK verification.
+
+APK: `D:\TyrePing-Releases\debug\TyrePing-features-41-49-debug.apk`
+
+- Package `nz.paulwillard.tyreping.debug`; label **TyrePing Debug**.
+- Version **0.10.0 / 1000000** (local feature build, no release/version bump).
+- Minimum API 28, target API 37; **90,373,623 bytes**.
+- SHA-256: `374bf459618c7bb53e8c46868f808adcffb9300cf51ce9167449cb601fe66e6b`.
+- Certificate SHA-256: `f8885d0bdc47e76b9a6a1ff80fff87f2962aeacbf54fc389e7f2fd7476216fd5`.
+
+Logs: `build/monitor-tools-final.log`, `monitor-tools-tests.log`, `monitor-tools-integration-tests.log`,
+`monitor-tools-analysis.log`. The analysis command exits nonzero for the existing main findings above.
+Physical BLE, Android tile behaviour, notifications, audio/vibration and ride triggers still require a phone.
+
 ## v0.10.0 pre-release
 
 This release combines features 31–38, the new van/ute schematics and the portrait diagram regression

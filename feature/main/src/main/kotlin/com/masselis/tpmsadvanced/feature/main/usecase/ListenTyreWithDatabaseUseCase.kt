@@ -49,11 +49,13 @@ internal interface ListenTyreWithDatabaseUseCase : ListenTyreUseCase {
             }
                 .onEach { tyre ->
                     latestReading = tyre
+                    FleetHealth.recordLeak(vehicle.uuid, tyre)
                     tyreDatabase.insert(tyre, vehicle.uuid)
                 }
                 .onStart {
                     // Settings changes clear the previous session's warning without writing a fake broadcast.
                     latestReading = latestReading?.copy(pressureLoss = null)
+                    latestReading?.let { FleetHealth.recordLeak(vehicle.uuid, it) }
                     val bound = sensorBindingUseCase.boundSensor().value
                     latestReading?.takeIf {
                         if (bound == null) !sensorBindingUseCase.isBound(it.sensorId) else bound.id == it.sensorId

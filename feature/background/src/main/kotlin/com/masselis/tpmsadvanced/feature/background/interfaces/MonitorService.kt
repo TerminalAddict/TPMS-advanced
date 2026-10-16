@@ -35,6 +35,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import java.util.UUID
 import com.masselis.tpmsadvanced.feature.main.usecase.FleetHealth
 import com.masselis.tpmsadvanced.feature.main.usecase.RideRuntime
@@ -53,6 +56,7 @@ internal class MonitorService : LifecycleService() {
         lifecycleScope.launch { FleetHealth.observe() }
         lifecycleScope.launch { AutomaticVehicleSelection.watch() }
         lifecycleScope.launch { spokenMonitoringDiagnostics() }
+        lifecycleScope.launch { liveTyreNotification() }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -132,13 +136,37 @@ internal class MonitorService : LifecycleService() {
         }
     }
 
-    private fun startReadings(vehicle: Vehicle, reason: String = "manual start") {
+    private suspend fun startReadings(vehicle: Vehicle, reason: String = "manual start") {
+        val tools = appGraph as com.masselis.tpmsadvanced.data.vehicle.ioc.VehicleToolsDependencies
+        val all = withContext(Dispatchers.IO) { tools.toolsVehicles.selectAll().execute() }
+        val trailer = tools.rideTools.read().insights.activeFor(vehicle.uuid,
+            all.associate { it.uuid.toString() to it.kind })?.trailer
+        val started = now()
+        val rideIds = withContext(NonCancellable) {
+            tools.monitoringHistory.beginRides(listOf(vehicle) + all.filter { it.uuid.toString() == trailer },
+                started, tools.rideTools.read().missingMinutes * SECONDS_PER_MINUTE)
+        }
+        if (!currentCoroutineContext().isActive || stopRequested) {
+            withContext(NonCancellable) { tools.monitoringHistory.endRides(now(), "Start cancelled", rideIds) }
+            return
+        }
         val job = SupervisorJob(lifecycleScope.coroutineContext[Job])
         monitoring = job
         readingsActive.value = true
-        RideRuntime.started.value = now()
+        RideRuntime.started.value = started
         RideRuntime.parked.value = false
         val scope = CoroutineScope(lifecycleScope.coroutineContext + job)
+        scope.launch(start = kotlinx.coroutines.CoroutineStart.UNDISPATCHED) {
+            try {
+                while (true) {
+                    tools.monitoringHistory.heartbeat(now(), rideIds)
+                    kotlinx.coroutines.delay(HEARTBEAT_MS)
+                }
+            } finally { withContext(NonCancellable) {
+                tools.monitoringHistory.endRides(now(), if (stopRequested) "Stopped by user" else "Monitoring ended",
+                    rideIds)
+            } }
+        }
         scope.launch { FleetHealth.captureReadings() }
         scope.launch { fleetWarnings() }
         ServiceComponent(vehicle, this, scope)
@@ -220,6 +248,8 @@ internal class MonitorService : LifecycleService() {
         val status = MutableStateFlow("Stopped")
         val readingsActive = MutableStateFlow(false)
         private const val PARAM_VEHICLE = "VEHICLE_PARAM"
+        private const val HEARTBEAT_MS = 5_000L
+        private const val SECONDS_PER_MINUTE = 60.0
         private const val PARAM_AUTO = "AUTOMATIC_RIDE"
         private const val CHANNEL = "AUTOMATIC_RIDES"
         const val WAITING_ID = 414100

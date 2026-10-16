@@ -23,6 +23,19 @@ public interface VehicleToolsDependencies {
     public val toolsCalibration: CalibrationRepository
     public val toolsBackups: ConfigurationBackups
     public val rideTools: com.masselis.tpmsadvanced.data.vehicle.interfaces.RideToolsStore
+    public val maintenanceMode: com.masselis.tpmsadvanced.data.vehicle.interfaces.MaintenanceMode
+    public val monitoringHistory: com.masselis.tpmsadvanced.data.vehicle.interfaces.MonitoringHistory
+
+    @Provides
+    @SingleIn(AppScope::class)
+    private fun maintenance(context: Context): com.masselis.tpmsadvanced.data.vehicle.interfaces.MaintenanceMode =
+        com.masselis.tpmsadvanced.data.vehicle.interfaces.MaintenanceMode(context)
+
+    @Provides
+    @SingleIn(AppScope::class)
+    private fun monitoringHistory(database: Database, context: Context):
+        com.masselis.tpmsadvanced.data.vehicle.interfaces.MonitoringHistory =
+        com.masselis.tpmsadvanced.data.vehicle.interfaces.MonitoringHistory(database, context)
 
     @Provides
     @SingleIn(AppScope::class)

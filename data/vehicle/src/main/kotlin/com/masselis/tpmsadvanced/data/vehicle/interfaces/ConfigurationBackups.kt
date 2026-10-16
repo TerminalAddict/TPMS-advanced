@@ -62,7 +62,10 @@ public class ConfigurationBackups internal constructor(private val database: Dat
             preferences("DISCOVERED_SENSORS").all.mapNotNull { (key, value) ->
                 key.toIntOrNull()?.let { id -> (value as? String)?.let { id to it } }
             }.toMap(),
-            RideToolsStore(context).read().let { data -> data.copy(insights = data.insights.forVehicles(
+            RideToolsStore(context).read().let { data -> data.copy(
+                monitoring = data.monitoring.copy(parkedRoutes = data.monitoring.parkedRoutes.filterKeys {
+                    id -> vehicles.any { it.uuid == id }
+                }), insights = data.insights.forVehicles(
                 vehicles.associate { it.uuid to Vehicle.Kind.valueOf(it.kind) }),
                 vehicles = data.vehicles.filterKeys { id ->
                 vehicles.any { it.uuid == id }

@@ -85,7 +85,10 @@ internal class ServiceNotifier(
             .map { comp -> comp.tyreAtmosphereUseCase.listen().map { comp.location to it } }
             .partialReadings()
             .debounce(100.milliseconds)
-            .alertStates(vehicleRangesUseCase)
+            .alertStates(vehicleRangesUseCase,
+                (com.masselis.tpmsadvanced.core.common.appGraph as
+                    com.masselis.tpmsadvanced.data.vehicle.ioc.VehicleToolsDependencies)
+                    .maintenanceMode.observe(vehicle.uuid))
             .catch { logger.e("Failed to listen for atmospheres", it); emit(ScanFailure) }
             .combine(scanner.scanStatus.notices()) { state, notice -> state to notice }
             .distinctUntilChanged()

@@ -43,6 +43,9 @@ internal fun Settings(
     UnitsSettings()
     Separator()
     AlertsSettings()
+    com.masselis.tpmsadvanced.feature.background.interfaces.ui.MonitoringControlsSettings()
+    com.masselis.tpmsadvanced.feature.main.interfaces.composable.MonitoringToolsSettings(
+        LocalVehicleComponent.current.vehicle)
     Separator()
     VehicleSettings(
         snackbarHostState = snackbarHostState,

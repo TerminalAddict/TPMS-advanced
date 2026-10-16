@@ -7,6 +7,22 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 internal class ConfigurationBackupTest {
+    @Test fun `monitoring settings round trip validate vehicle references and merge parked routes`() {
+        val base = backup()
+        val id = base.vehicles.single().uuid
+        val config = MonitoringTools(true, mapOf(id to ParkedAlertRoute.NOTIFICATION_ONLY), 30, 90, 365)
+        val complete = base.copy(settings = base.settings.copy(rideTools = RideToolsData(monitoring = config)))
+        assertEquals(complete, ConfigurationBackup.decode(complete.encode()))
+        assertFailsWith<IllegalArgumentException> {
+            base.copy(settings = base.settings.copy(rideTools = RideToolsData(monitoring = config.copy(
+                parkedRoutes = mapOf(UUID.randomUUID().toString() to ParkedAlertRoute.OFF))))).validate()
+        }
+        val retained = UUID.randomUUID().toString()
+        val old = RideToolsData(monitoring = MonitoringTools(parkedRoutes = mapOf(retained to ParkedAlertRoute.OFF)))
+        val merged = mergeRideTools(old, complete.settings.rideTools, listOf(id))
+        assertEquals(mapOf(retained to ParkedAlertRoute.OFF, id to ParkedAlertRoute.NOTIFICATION_ONLY),
+            merged.monitoring.parkedRoutes)
+    }
     private fun vehicle(kind: Vehicle.Kind = Vehicle.Kind.CAR_WITH_SPARE) = BackupVehicle(
         UUID.randomUUID().toString(), kind.name, "Paul's vehicle", true,
         180f, 300f, false, 190f, 320f, -20f, 45f, 90f,

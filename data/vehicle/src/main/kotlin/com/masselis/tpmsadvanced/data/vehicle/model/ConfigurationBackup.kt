@@ -27,6 +27,7 @@ public data class ConfigurationBackup(
         val kinds = vehicles.associate { it.uuid to Vehicle.Kind.valueOf(it.kind) }
         require(settings.rideTools.insights.combinations.all { it.isValidFor(kinds) })
         require(settings.rideTools.insights.imbalanceKpa.keys.all { it in kinds })
+        require(settings.rideTools.monitoring.parkedRoutes.keys.all { it in kinds })
         require(settings.rideTools.insights.cold.all { (id, baseline) ->
             kinds[id]?.let { kind -> baseline.samples.keys.all { backupLocation(it) in kind.locations } } == true
         })

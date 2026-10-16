@@ -58,13 +58,20 @@ import java.time.LocalDate
 
 @Composable
 public fun ReadyToRide(vehicle: Vehicle, modifier: Modifier = Modifier) {
-    val tools by (appGraph as VehicleToolsDependencies).rideTools.values.collectAsState()
-    ReadinessCard(vehicle, tools.insights, modifier)
+    val deps = appGraph as VehicleToolsDependencies
+    val tools by deps.rideTools.values.collectAsState()
+    val windows by deps.maintenanceMode.windows.collectAsState()
+    val trailer = tools.insights.combinations.firstOrNull { it.id == tools.insights.activeCombination &&
+        it.vehicle == vehicle.uuid.toString() }?.trailer
+    val maintenance = windows.any { it.vehicle in listOfNotNull(vehicle.uuid.toString(), trailer) &&
+        deps.maintenanceMode.active(java.util.UUID.fromString(it.vehicle)) }
+    ReadinessCard(vehicle, tools.insights, modifier,
+        if (maintenance) "Maintenance active · pressure alerts paused" else null)
 }
 
 @Composable
 internal fun ReadinessCard(vehicle: Vehicle, insights: com.masselis.tpmsadvanced.data.vehicle.model.DrivingInsights,
-    modifier: Modifier = Modifier) {
+    modifier: Modifier = Modifier, maintenanceNote: String? = null) {
     val fleet by FleetHealth.values.collectAsState()
     val combination = insights.activeFor(vehicle.uuid,
         fleet.associate { it.vehicle.uuid.toString() to it.vehicle.kind })
@@ -83,7 +90,7 @@ internal fun ReadinessCard(vehicle: Vehicle, insights: com.masselis.tpmsadvanced
     }
     Card(onClick = { open = true }, modifier = modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
         Column(Modifier.padding(10.dp)) {
-            Text(readinessTitle(health, scanNotice != null, started != null),
+            Text(readinessTitle(health, scanNotice != null, started != null, maintenanceNote),
                 style = MaterialTheme.typography.titleSmall)
             Text((scanNotice ?: status) + if (parked) " · Parked" else "",
                 style = MaterialTheme.typography.bodySmall)
@@ -91,6 +98,7 @@ internal fun ReadinessCard(vehicle: Vehicle, insights: com.masselis.tpmsadvanced
     }
     if (open) RideToolsDialog("Ready-to-Ride · ${combination?.name ?: vehicle.name}", { open = false }) {
         Text(status)
+        MaintenanceNotice(maintenanceNote)
         scanNotice?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         Text("Healthy means a reading within 2 minutes and within your limits. Sleeping sensors are unconfirmed; " +
             "wake them and wait for readings before relying on this check.")
@@ -112,12 +120,18 @@ internal fun ReadinessCard(vehicle: Vehicle, insights: com.masselis.tpmsadvanced
     }
 }
 
-private fun readinessTitle(health: VehicleHealth?, scanWarning: Boolean, monitoring: Boolean): String = when {
+private fun readinessTitle(health: VehicleHealth?, scanWarning: Boolean, monitoring: Boolean,
+    maintenance: String? = null): String = maintenance ?: when {
     health == null -> "Ready-to-Ride · checking readings"
     health.warning || scanWarning -> "Ready-to-Ride · warnings to review"
     health.ready && !monitoring -> "Sensors healthy · monitoring not active"
     health.ready -> "Ready-to-Ride · all sensors recently healthy"
     else -> "Ready-to-Ride · waiting for sensors"
+}
+
+@Composable
+private fun MaintenanceNotice(note: String?) {
+    note?.let { Text("$it. End maintenance in Monitoring tools before riding.") }
 }
 
 @Composable

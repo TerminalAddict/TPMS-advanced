@@ -15,6 +15,7 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import com.masselis.tpmsadvanced.data.vehicle.model.WheelHealth
 import com.masselis.tpmsadvanced.data.vehicle.model.WheelReadiness
 import com.masselis.tpmsadvanced.data.vehicle.model.wheelHealth
+import com.masselis.tpmsadvanced.data.vehicle.model.backupLocation
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -59,6 +60,11 @@ public object FleetHealth {
     private const val MINUTE_MS = 60_000L
     private val deps get() = appGraph as VehicleToolsDependencies
     private val tracker = MissingSensorTracker()
+    private val liveLeaks = java.util.concurrent.ConcurrentHashMap<String, Tyre.Located>()
+    internal fun recordLeak(vehicle: UUID, reading: Tyre.Located) {
+        val key = "$vehicle:${reading.location}"
+        if (reading.pressureLoss == null) liveLeaks.remove(key) else liveLeaks[key] = reading
+    }
     public val values: MutableStateFlow<List<VehicleHealth>> = MutableStateFlow(emptyList())
     public val scanNotice: MutableStateFlow<String?> = MutableStateFlow(null)
 
@@ -74,6 +80,7 @@ public object FleetHealth {
 
     /** A widget refresh reads cached data without waking or starting the scanner. */
     public suspend fun snapshot(): List<VehicleHealth> = withContext(Dispatchers.IO) {
+        deps.maintenanceMode.expire()
         scanNotice.value = scanWarning(deps.toolsScanner.scanStatus.value, RideRuntime.started.value != null)
         val settings = deps.rideTools.read()
         val raw = deps.toolsVehicles.selectAll().execute().associateWith { vehicle ->
@@ -85,7 +92,8 @@ public object FleetHealth {
             }
         }
         val missing = synchronized(tracker) {
-            tracker.evaluate(raw.flatMap { (vehicle, wheels) -> wheels.mapNotNull { (location, reading) ->
+            tracker.evaluate(raw.filterKeys { !deps.maintenanceMode.active(it.uuid) }.flatMap { (vehicle,
+                wheels) -> wheels.mapNotNull { (location, reading) ->
                 reading?.let { key(vehicle.uuid, location, it.sensorId) to it.timestamp }
             } }.toMap(), RideRuntime.started.value.takeIf { !RideRuntime.parked.value && settings.missingEnabled },
                 deps.toolsScanner.scanStatus.value == ScanStatus.Scanning, SystemClock.elapsedRealtime(),
@@ -96,7 +104,10 @@ public object FleetHealth {
                 val calibration = tyre?.let { deps.toolsCalibration.values.value[it.sensorId] } ?: SensorCalibration()
                 val reading = tyre?.let { TyreAtmosphere(it.timestamp, it.sensorId,
                     if (it.isAlarm) Pressure(0f) else calibration.pressure(it.pressure),
-                    calibration.temperature(it.temperature), it.sensorBattery, it.pressureLoss) }
+                    calibration.temperature(it.temperature), it.sensorBattery,
+                    liveLeaks["${vehicle.uuid}:$location"]?.takeIf { leak ->
+                        leak.sensorId == it.sensorId && leak.timestamp == it.timestamp
+                    }?.pressureLoss ?: it.pressureLoss) }
                 wheelHealth(vehicle, location, reading, now(), tyre?.let {
                     key(vehicle.uuid, location, it.sensorId) in missing
                 } == true)
@@ -109,7 +120,21 @@ public object FleetHealth {
     }
 
     private val observations by lazy {
-        flow { while (true) { snapshot(); emit(Unit); delay(REFRESH_MS) } }
+        flow { while (true) {
+            val fleet = snapshot()
+            val maintenance = fleet.filter { deps.maintenanceMode.active(it.vehicle.uuid) }
+                .map { it.vehicle.uuid.toString() }.toSet()
+            deps.monitoringHistory.recordEvents(fleet.flatMap {
+                it.monitoringEvents(it.vehicle.uuid.toString() in maintenance)
+            }, now(), fleet.flatMap { health -> health.wheels.filter {
+                it.state == WheelReadiness.SLEEPING || it.state == WheelReadiness.UNSEEN
+            }.map { "${health.vehicle.uuid}:${backupLocation(it.location)}" }
+            }.toSet(), maintenance)
+            emit(Unit); delay(REFRESH_MS)
+        } }.retryWhen { failure, _ ->
+            co.touchlab.kermit.Logger.withTag("MonitoringHistory").w("Could not record monitoring status", failure)
+            delay(REFRESH_MS); true
+        }
             .shareIn(GlobalScope, SharingStarted.WhileSubscribed(), replay = 0)
     }
     /** Phone, car host and service can observe together without duplicating the polling loop. */

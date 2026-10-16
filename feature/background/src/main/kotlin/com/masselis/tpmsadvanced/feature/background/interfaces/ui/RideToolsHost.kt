@@ -37,6 +37,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 public fun RideToolsHost() {
+    RideReportPrompt()
     val running by MonitorService.isRunning.collectAsState()
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
     LaunchedEffect(running, lifecycle) {

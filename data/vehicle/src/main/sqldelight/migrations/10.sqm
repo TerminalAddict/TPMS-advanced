@@ -1,0 +1,14 @@
+CREATE TABLE AlertEvent (
+    id TEXT NOT NULL PRIMARY KEY, eventKey TEXT NOT NULL, vehicleId TEXT NOT NULL,
+    vehicleName TEXT NOT NULL, wheel TEXT NOT NULL, sensorId INTEGER,
+    kind TEXT NOT NULL, severity TEXT NOT NULL, started REAL NOT NULL, lastSeen REAL NOT NULL,
+    ended REAL, dismissed REAL, resolution TEXT
+);
+CREATE INDEX alert_event_time ON AlertEvent(started);
+CREATE INDEX alert_event_vehicle_time ON AlertEvent(vehicleId, started);
+CREATE TABLE RideReport (
+    id TEXT NOT NULL PRIMARY KEY, vehicleId TEXT NOT NULL, vehicleName TEXT NOT NULL,
+    started REAL NOT NULL, lastSeen REAL NOT NULL, ended REAL, reason TEXT,
+    expected TEXT NOT NULL, gapSeconds REAL NOT NULL, summary TEXT
+);
+CREATE INDEX ride_report_time ON RideReport(started);
