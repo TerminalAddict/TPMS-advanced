@@ -25,8 +25,8 @@ The implementation is adapted to TyrePing's service, scanner, reactive readings 
 - [README.md](README.md) explains controls, defaults and limitations.
 - [TESTING.md](TESTING.md) covers installation and all ten features, including ADB simulation.
 - Graph sessions use a 15-minute gap heuristic; CSV and graphs contain raw readings.
-- Van and ute currently reuse the car diagram. The spare and single wheel require explicit binding.
-- Diagnostics capture TPMS-filtered advertisements, not every Bluetooth device nearby.
+- Van and ute now have their own diagrams. The spare and single wheel require explicit binding.
+- Sensor discovery supports unfiltered BLE capture; regular monitoring uses TPMS-filtered advertisements.
 - Restores merge configuration; history and raw captures have separate exports, not imports.
 - Motion savings apply to beacon waiting, never to active tyre monitoring.
 - Real radio reception, audio routing, motion, screen-off/OEM behaviour, battery savings and document

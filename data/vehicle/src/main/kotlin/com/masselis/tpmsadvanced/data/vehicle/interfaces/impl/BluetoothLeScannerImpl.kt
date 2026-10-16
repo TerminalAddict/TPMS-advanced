@@ -26,6 +26,7 @@ import androidx.core.content.getSystemService
 import co.touchlab.kermit.Logger
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BleDiagnostics
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorReception
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.Failure
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus
 import com.masselis.tpmsadvanced.data.vehicle.model.ScannerRecord
@@ -142,11 +143,13 @@ internal class BluetoothLeScannerImpl(
     }.flowOn(Dispatchers.Main) // System's BluetoothLeScanner class as issues if called on a background thread
         .recoveringScan(bluetoothEnabled) { next ->
             status.value = next
+            SensorReception.status(next)
             logger.i("Scan status: $next")
         }
         .withMockAdvertisements(context, scanFilters)
         .map {
             val packet = inspectAdvertisement(it)
+            SensorReception.record(packet)
             if (BleDiagnostics.enabled.value) {
                 BleDiagnostics.record(it.scanRecord?.bytes, it.rssi, packet.address,
                     packet.decoder, packet.reading?.sensorId, packet.status)

@@ -81,8 +81,10 @@ public data class RideToolsData(
     val vehicles: Map<String, VehicleRideTools> = emptyMap(),
     val missingEnabled: Boolean = true, val missingMinutes: Int = 10,
     val automaticSelection: Boolean = false, val spokenDiagnostics: Boolean = false,
+    val insights: DrivingInsights = DrivingInsights(),
 ) {
     public fun validate() {
+        insights.validate()
         require(vehicles.size <= 100 && missingMinutes in 1..60)
         require(vehicles.values.sumOf { it.records.size } <= 1000)
         vehicles.forEach { (id, value) -> require(UUID.fromString(id).toString() == id); value.validate() }
@@ -95,9 +97,16 @@ public data class RideToolsData(
 public fun automaticVehicleCandidate(connected: List<String>, manualOverride: Boolean): String? =
     connected.distinct().singleOrNull().takeUnless { manualOverride }
 
-public fun mergeRideTools(previous: RideToolsData, imported: RideToolsData, replaced: List<String>): RideToolsData =
-    imported.copy(vehicles = previous.vehicles.filterKeys { it !in replaced } + imported.vehicles)
+public fun mergeRideTools(previous: RideToolsData, imported: RideToolsData, replaced: List<String>): RideToolsData {
+    val retained = previous.insights.combinations.filter { it.vehicle !in replaced && it.trailer !in replaced }
+        .filter { old -> imported.insights.combinations.none { it.id == old.id || it.name.equals(old.name, true) } }
+    return imported.copy(vehicles = previous.vehicles.filterKeys { it !in replaced } + imported.vehicles,
+        insights = imported.insights.copy(combinations = retained + imported.insights.combinations,
+            imbalanceKpa = previous.insights.imbalanceKpa.filterKeys { it !in replaced } +
+                imported.insights.imbalanceKpa,
+            cold = previous.insights.cold.filterKeys { it !in replaced } + imported.insights.cold))
         .also(RideToolsData::validate)
+}
 
 /** Parse only the supported vehicle link; arbitrary or malformed external intents cannot select a vehicle. */
 public fun vehicleLinkId(text: String?): UUID? = runCatching {

@@ -24,6 +24,12 @@ public data class ConfigurationBackup(
         val sensors = vehicles.flatMap { it.sensors }.map { it.id }
         require(sensors.distinct().size == sensors.size) { "A sensor is assigned to multiple wheels" }
         settings.validate(vehicles.map { it.uuid }.toSet())
+        val kinds = vehicles.associate { it.uuid to Vehicle.Kind.valueOf(it.kind) }
+        require(settings.rideTools.insights.combinations.all { it.isValidFor(kinds) })
+        require(settings.rideTools.insights.imbalanceKpa.keys.all { it in kinds })
+        require(settings.rideTools.insights.cold.all { (id, baseline) ->
+            kinds[id]?.let { kind -> baseline.samples.keys.all { backupLocation(it) in kind.locations } } == true
+        })
         vehicles.forEach { vehicle -> settings.rideTools.vehicles[vehicle.uuid]?.let { tools ->
             require(tools.records.all { backupLocation(it.wheel) in Vehicle.Kind.valueOf(vehicle.kind).locations })
             require(vehicle.kind != Vehicle.Kind.SINGLE_AXLE_TRAILER.name || tools.profiles.none { it.separateRear })

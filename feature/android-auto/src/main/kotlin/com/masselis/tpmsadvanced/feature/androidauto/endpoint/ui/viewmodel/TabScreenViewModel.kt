@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.runningFold
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -68,6 +69,7 @@ internal class TabScreenViewModel(
             currentVehicleUseCase
         ) { list, current -> list to current }
             .flatMapLatest { (list, current) ->
+                if (list.none { it.uuid == current.vehicle.uuid }) return@flatMapLatest flowOf(State.Loading)
                 current
                     .vehicle.kind.locations.map { current.TyreComponent(it) }
                     .map { tyreComponent ->
@@ -80,14 +82,13 @@ internal class TabScreenViewModel(
                     }
                     .asFlow()
                     .flattenMerge()
-                    .runningFold(mutableMapOf<Location, Pair<TyreIconStateFlow.State, TyreStatsStateFlow.State>>()) { acc, (location, pairOfStates) ->
-                        acc[location] = pairOfStates
-                        acc
+                    .runningFold(emptyMap<Location, Pair<TyreIconStateFlow.State, TyreStatsStateFlow.State>>()) { acc, (location, pairOfStates) ->
+                        acc + (location to pairOfStates)
                     }
                     .map {
                         State.Tabs(
                             list.map { vehicle -> State.Tabs.Tab.Available(vehicle) },
-                            State.Tabs.Tab.Displayed(current.vehicle, it)
+                            State.Tabs.Tab.Displayed(list.first { vehicle -> vehicle.uuid == current.vehicle.uuid }, it)
                         )
                     }
             }

@@ -1,5 +1,115 @@
 # Combined feature-batch testing
 
+## v0.10.0 pre-release
+
+This release combines features 31–38, the new van/ute schematics and the portrait diagram regression
+fix below. The signed release uses package `nz.paulwillard.tyreping` and updates signed TyrePing
+installations. TyrePing Debug remains a separate app; transfer its configuration with backup/restore
+if needed. Use the feature checks below for physical-device validation.
+
+## Vehicle diagram regression fix
+
+This follow-up retains features 31–38 and the van/ute artwork. The previous build could silently
+replace portrait diagrams with cards when text was enlarged, high visibility was enabled, or the
+remaining dashboard area became wider than it was tall. Layout now uses the screen orientation
+and an explicit **Settings → Use reading cards in portrait** switch, off by default.
+
+```powershell
+adb install -r "D:\TyrePing-Releases\debug\TyrePing-vehicle-diagrams-fix-debug.apk"
+```
+
+Check the car, van, ute, motorcycle and trailer diagrams in portrait, including enlarged Android
+fonts and reduced space beneath the dashboard controls. Change high visibility and readout size:
+the diagram should stay visible. Turn the new switch on/off and restart to check persistence.
+Use cards for very large text. Rotate to landscape to check automatic cards, then return to portrait
+to restore the diagram. Combined towing, car-with-spare and monowheel views continue to use cards.
+
+Verified 16 October 2026: 162 tests passed across main (70) and data/vehicle (92), including eight
+layout-selection regression tests and inspected car/van/ute renders. Four-wheel diagrams scroll
+when space is short; missing-sensor labels use compact text and readings stay within the screen edges.
+APK assembly, lint (0 errors / 19 warnings), and debug signature verification passed. Main Detekt
+retains its existing 13 MagicNumber findings; no new findings. No phone testing performed for this fix.
+APK: 90,822,439 bytes; version 0.9.1 / 901000; package `nz.paulwillard.tyreping.debug`.
+SHA-256: `221980761473de222119ff6bf2cd1faa013b1333377fcca5dd471b6365589bb1`.
+
+## Features 31–38 — towing and sensor insights debug checkpoint
+
+Branch: `codex/towing-and-sensor-insights`, based on v0.9.1. Includes the pending van/ute artwork.
+This is a local debug build, not a release. Install **TyrePing Debug** alongside signed TyrePing:
+
+```powershell
+adb install -r "D:\TyrePing-Releases\debug\TyrePing-features-31-38-debug.apk"
+```
+
+Verified checkpoint, 16 October 2026: **202 local tests passed** (data 92, main 62, background 44,
+Android Auto 2, phone 2), including layout renders inspected at normal and enlarged text sizes.
+Debug assembly and Android lint passed (0 errors, 19 warnings). Android Auto instrumentation tests
+compile; they have not been run on a host/device. Detekt passes for data, background, Android Auto
+and phone; main retains its existing 13 MagicNumber findings in AlertSlider/TyreStat.
+APK: 91,028,999 bytes, version 0.9.1 / 901000, package `nz.paulwillard.tyreping.debug`, verified debug signature.
+SHA-256: `241e2fe9aa7983090701ec7c2e47670594624d09bd3200bbdb23d0c3dcc162d5`.
+
+1. **Combined dashboard:** create a car/ute/van and a single/tandem trailer. Give them distinct
+   thresholds and sensor IDs. Save/select a towing combination from the dashboard. Confirm both
+   vehicles' readings and warnings appear under their own names; tap each wheel to manage the
+   correct binding. Edit/delete combinations, choose Individual view, switch vehicles manually,
+   restart and restore a backup. Deleting a linked vehicle must not crash the dashboard or backup.
+2. **Imbalance:** enable a 20 kPa threshold in Tyre insights. With a broad normal range, send
+   230 and 260 kPa to the left/right tyres on one axle. Expect an imbalance despite both being
+   individually in range. Equalise them to clear it. Front versus rear, motorcycle front/rear and
+   spare tyres must not be compared. Stale readings (>2 min), future timestamps and pairs more
+   than 1 min apart must not trigger. Test tandem front/rear and single trailer left/right.
+   Start monitoring and send new packets to test speech/tones and repeat/silence; Parked pauses
+   imbalance announcements, while ordinary pressure warnings retain their existing behaviour.
+3. **Reception:** open Sensor reception quality; repeated unchanged broadcasts must increase counts.
+   Set the known interval to 10 seconds and introduce longer gaps to see estimates. Bluetooth off/on
+   and closing the app's scan consumers must not count as packet loss. Check RSSI, mean/range,
+   last-observed age, unknown RSSI, weak-signal text, reset, and blank interval to disable estimates.
+   Counter history is bounded and resets after process restart; the configured interval persists.
+4. **Cold/hot:** bind and send fresh positive readings for every wheel. Confirm cold only when
+   actually cold (use simulated readings for this software test), then send warmer/higher readings.
+   Check each tyre's deltas; cooler/lower readings can show negative changes. Change calibration
+   and verify it applies consistently to both baseline and current readings. Reassign a sensor,
+   stop broadcasts, clear/replace the baseline and verify no misleading comparison remains.
+   No automatic cold baseline should be inferred on launch.
+5. **Android Auto:** connect to the Desktop Head Unit or car host while parked. Verify vehicle status,
+   pressure/temperature units, warning text and last-seen age. Start with missing sensors, switch tabs,
+   add/delete vehicles, and check a car with a spare. Titles and row order should stay stable during
+   updates; the host row limit is honoured. Test screen-off monitoring separately on the phone.
+6. **Health check:** run checks with Bluetooth off/on, Nearby devices denied/granted, background
+   monitoring stopped/running, stale sensors and notifications blocked/allowed. Test tones, speech,
+   vibration, sound/vibration off, muted alarm volume, Do Not Disturb and a blocked test channel.
+   The app must ask you to confirm actual delivery. Silence and real tyre alerts take priority;
+   Stop test or closing the dialog stops playback. Test never changes the configured alert modes.
+7. **Accessibility:** enable high visibility, select reading cards in portrait and try every readout size.
+   The diagram is now the default portrait view regardless of text size. Repeat at Android's largest
+   font/display settings in portrait and landscape on a small screen. Readouts should wrap and scroll,
+   warning text should stay steady in high visibility, and binding buttons must remain reachable.
+   Use TalkBack to verify wheel labels, reading units, warnings and control descriptions.
+8. **Compatibility toolkit:** scan an unknown sensor, inspect AD-field offsets/types/lengths and
+   changing offsets, and export both raw and anonymised samples. Raw JSONL retains evidence;
+   anonymised JSONL contains only structure/relative timing/RSSI and no names, MACs, IDs or payload
+   bytes. Both exports must work after the document picker pauses scanning. Reopen the export and
+   verify malformed/truncated packets don't crash inspection. No automatic unknown-protocol binding.
+
+For simulation, use the existing ADB commands below with separate IDs/addresses for each bound wheel.
+Physical BLE range, background survival, actual audio/vibration, TalkBack and Android Auto host behaviour
+require device testing; local tests cannot establish them.
+
+## Van and ute artwork — debug checkpoint
+
+Branch: `codex/van-ute-artwork`, based on v0.9.1. Install with:
+
+```powershell
+adb install -r "D:\TyrePing-Releases\debug\TyrePing-van-ute-debug.apk"
+```
+
+Select or create a **Van** and a **Ute / pickup** in portrait orientation. The van should have an
+enclosed cargo roof; the ute should have an open rear load tray. Both face the top of the screen.
+Check all four tyre icons and readings, tap each wheel to manage its sensor, and switch between
+light and dark themes: the background should remain clear with only the vehicle lines tinted.
+The car diagram and landscape reading cards retain their existing layouts.
+
 ## About page — v0.9.1 pre-release and debug checkpoint
 
 Developed on `codex/about-page`, based on v0.9.0. The signed v0.9.1 pre-release adds this page

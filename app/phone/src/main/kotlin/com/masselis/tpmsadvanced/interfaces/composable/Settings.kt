@@ -53,6 +53,8 @@ internal fun Settings(
     AutomaticSelectionSettings(LocalVehicleComponent.current.vehicle)
     Separator()
     RideToolsSettings(LocalVehicleComponent.current.vehicle)
+    com.masselis.tpmsadvanced.feature.main.interfaces.composable.DrivingSettings(LocalVehicleComponent.current.vehicle)
+    com.masselis.tpmsadvanced.feature.background.interfaces.ui.MonitoringHealthButton()
     NfcVehicleSettings(LocalVehicleComponent.current.vehicle)
     Separator()
     SensorManagementSettings(LocalVehicleComponent.current.vehicle)

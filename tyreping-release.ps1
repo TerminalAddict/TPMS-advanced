@@ -410,7 +410,8 @@ try {
     }
 
     Write-Host "`n==> Run unit tests and build the signed release" -ForegroundColor Cyan
-    & $gradlew ':feature:main:testDebugUnitTest' ':feature:qrcode:testDebugUnitTest' ':app:phone:assembleRelease'
+    & $gradlew ':feature:main:testDebugUnitTest' ':feature:qrcode:testDebugUnitTest' ':app:phone:assembleRelease' `
+        '--no-configuration-cache' '--no-build-cache' '--no-scan' '--console=plain'
     Assert-LastExit 'Gradle unit tests and release build'
     $null = Assert-ReleaseApk -ApkSigner $apkSigner -WantedVersion $Version -PreviousVersionTag $previousTag
 
@@ -427,7 +428,7 @@ try {
 
         # Rebuild after committing: the tagged commit is the exact source for the APK.
         Write-Host "`n==> Rebuild APK from the committed source" -ForegroundColor Cyan
-        & $gradlew ':app:phone:assembleRelease'
+        & $gradlew ':app:phone:assembleRelease' '--no-configuration-cache' '--no-build-cache' '--no-scan' '--console=plain'
         Assert-LastExit 'Gradle release rebuild'
         $null = Assert-ReleaseApk -ApkSigner $apkSigner -WantedVersion $Version -PreviousVersionTag $previousTag
     }

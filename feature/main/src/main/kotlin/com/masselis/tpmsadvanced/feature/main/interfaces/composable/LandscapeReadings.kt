@@ -30,7 +30,9 @@ internal fun LandscapeReadings(
     reading: @Composable (Location) -> Unit,
 ) {
     BoxWithConstraints(modifier) {
-        val columns = if (maxWidth >= 480.dp) 2 else 1
+        val scale = androidx.compose.ui.platform.LocalDensity.current.fontScale *
+            com.masselis.tpmsadvanced.core.ui.LocalReadability.current.scale
+        val columns = if (maxWidth >= 480.dp * scale) 2 else 1
         val cardHeight = if (locations.size <= columns) (maxHeight - 24.dp).coerceAtLeast(0.dp) else 0.dp
         LazyVerticalGrid(
             columns = GridCells.Fixed(columns),
@@ -47,11 +49,12 @@ internal fun LandscapeReadings(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
-                        Box(Modifier.fillMaxWidth()) {
+                        androidx.compose.foundation.layout.Row(Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically) {
                             Text(buildString { appendLoc(location, withType = false, capitalized = true) },
                                 style = MaterialTheme.typography.titleMedium,
-                                modifier = Modifier.align(Alignment.Center))
-                            Box(Modifier.align(Alignment.CenterEnd)) { binding(location) }
+                                modifier = Modifier.weight(1f))
+                            binding(location)
                         }
                         reading(location)
                     }

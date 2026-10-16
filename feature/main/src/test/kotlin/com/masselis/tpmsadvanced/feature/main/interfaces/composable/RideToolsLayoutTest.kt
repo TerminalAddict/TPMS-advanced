@@ -28,7 +28,7 @@ internal class RideToolsLayoutTest {
     @Test fun dashboardWaiting() = paparazzi.snapshot {
         FleetHealth.values.value = listOf(VehicleHealth(vehicle,
             vehicle.kind.locations.map { wheelHealth(vehicle, it, null, 100.0) }, null))
-        MaterialTheme { ReadyToRide(vehicle) }
+        MaterialTheme { ReadinessCard(vehicle, com.masselis.tpmsadvanced.data.vehicle.model.DrivingInsights()) }
     }
     @Test fun pressureProfile() = paparazzi.snapshot {
         MaterialTheme { ProfileEditor(PressureProfile(name = "Fully loaded", low = 180f, high = 300f,

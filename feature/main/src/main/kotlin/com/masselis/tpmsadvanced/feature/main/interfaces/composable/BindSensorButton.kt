@@ -23,7 +23,9 @@ internal fun BindSensorButton(
 ) {
     var manage by remember { mutableStateOf(false) }
     IconButton(onClick = { manage = true }, modifier = modifier.testTag(BindSensorTags.Button.tag(location))) {
-        Icon(ImageVector.vectorResource(R.drawable.link_variant_plus), contentDescription = "Assign or manage sensor")
+        Icon(ImageVector.vectorResource(R.drawable.link_variant_plus), contentDescription = buildString {
+            appendLoc(location, withType = false, capitalized = true); append(": assign or manage sensor")
+        })
     }
     if (manage) SensorManagementDialog(vehicleComponent.vehicle, location) { manage = false }
 }

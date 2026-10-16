@@ -184,8 +184,15 @@ private fun refreshFleetWarnings(manager: NotificationManagerCompat, channel: St
         val secondary = health.vehicle.uuid != MonitorService.activeVehicle.value
         val alerts = health.wheels.filter { it.state == WheelReadiness.WARNING && secondary &&
             (it.reading?.timestamp ?: 0.0) >= (RideRuntime.started.value ?: Double.MAX_VALUE) }
+        val imbalances = health.imbalances.filter { pair ->
+            !RideRuntime.parked.value && listOf(pair.left, pair.right).all { location ->
+                (health.wheels.firstOrNull { it.location == location }?.reading?.timestamp ?: 0.0) >=
+                    (RideRuntime.started.value ?: Double.MAX_VALUE)
+            }
+        }
         val text = (missing.map { "${it.label}: sensor missing" } +
-            alerts.map { "${it.label}: ${it.warnings.joinToString()}" }).joinToString("; ")
+            alerts.map { "${it.label}: ${it.warnings.joinToString()}" } +
+            imbalances.map { "${it.axle} axle: left/right pressure imbalance" }).joinToString("; ")
         if (text.isNotEmpty()) {
             val id = health.vehicle.uuid.hashCode() xor FLEET_NOTIFICATION_MASK
             activeIds += id
@@ -205,6 +212,8 @@ private fun refreshFleetWarnings(manager: NotificationManagerCompat, channel: St
                 "${health.vehicle.uuid}:${wheel.label}:${wheel.state}",
                 "${health.vehicle.name}. ${wheel.label}. " + if (wheel.state == WheelReadiness.MISSING)
                     "Sensor missing" else wheel.warnings.joinToString(), false, now()) }
+            imbalances.forEach { cues += AlertCue("${health.vehicle.uuid}:imbalance:${it.axle}",
+                "${health.vehicle.name}. ${it.axle} axle. Left and right tyre pressure imbalance.", false, now()) }
         }
     }
     return activeIds to cues

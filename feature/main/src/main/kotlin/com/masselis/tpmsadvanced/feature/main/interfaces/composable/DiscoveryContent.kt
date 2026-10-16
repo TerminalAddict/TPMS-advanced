@@ -37,6 +37,7 @@ internal fun DiscoveryContent(
     onStart: () -> Unit, onStop: () -> Unit, onMark: () -> Unit, onClear: () -> Unit,
     onExpand: (String) -> Unit, onAssign: (BleAdvertisement) -> Unit, onExport: (String?) -> Unit,
     onClose: () -> Unit,
+    onAnonymisedExport: (String) -> Unit = {}, packetsFor: (String) -> List<BleAdvertisement> = { emptyList() },
 ) {
     var help by remember { mutableStateOf(false) }
     FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -85,7 +86,8 @@ internal fun DiscoveryContent(
             key = { it.latest.address }) { device ->
             DiscoveryDeviceCard(device, now, expanded == device.latest.address,
                 { onExpand(device.latest.address) }, { device.decoded?.let(onAssign) },
-                { onExport(device.latest.address) })
+                { onExport(device.latest.address) }, { onAnonymisedExport(device.latest.address) },
+                if (expanded == device.latest.address) packetsFor(device.latest.address) else emptyList())
         }
     }
 }
@@ -93,7 +95,8 @@ internal fun DiscoveryContent(
 @Suppress("LongMethod")
 @Composable
 internal fun DiscoveryDeviceCard(device: BleDiscoverySession.Device, now: Double, expanded: Boolean,
-    onExpand: () -> Unit, onAssign: () -> Unit, onExport: () -> Unit) {
+    onExpand: () -> Unit, onAssign: () -> Unit, onExport: () -> Unit,
+    onAnonymisedExport: () -> Unit = {}, packets: List<BleAdvertisement> = emptyList()) {
     val packet = device.latest
     val decoded = device.decoded
     val tyre = decoded?.reading as? Tyre
@@ -133,9 +136,31 @@ internal fun DiscoveryDeviceCard(device: BleDiscoverySession.Device, now: Double
                 Text("Connectable: ${packet.connectable} · data status: ${packet.dataStatus} (0 = complete)")
                 Text("Latest packet decoder: ${packet.decoder ?: "none"}")
                 packet.status?.let { Text(it) }
+                CompatibilityInspector(packet, packets, onAnonymisedExport)
             } }
         }
     }
+}
+
+@Composable
+private fun CompatibilityInspector(packet: BleAdvertisement, packets: List<BleAdvertisement>, export: () -> Unit) {
+    val structure = com.masselis.tpmsadvanced.data.vehicle.model.advertisementStructure(packet.bytes)
+    Text("Compatibility toolkit", style = MaterialTheme.typography.titleMedium)
+    Text("${packet.bytes.length / 2} advertisement bytes · ${packets.size} retained samples")
+    if (structure.truncated) Text("Malformed or truncated advertisement: preserve raw capture for investigation.")
+    structure.fields.forEach { field ->
+        Text("Offset ${field.offset} · ${field.label} · ${field.payload.length / 2} payload bytes")
+    }
+    val changes = com.masselis.tpmsadvanced.data.vehicle.model.varyingByteOffsets(packets)
+    changes.forEach { (size, offsets) -> Text("$size-byte packets: changing offsets " +
+        offsets.joinToString().ifEmpty { "none observed" }) }
+    Text("Decoder investigation: record sensor model, known gauge pressure and temperature for several " +
+        "samples while parked. Compare changing bytes, units, byte order, status bits and checksums. " +
+        "Validate with independent samples before trusting a new decoder.")
+    Text("Anonymised export contains structure, relative timing, RSSI and changing offsets. It removes " +
+        "all payload bytes because unknown protocols may hide identifiers inside them. " +
+        "A raw device export is needed for full decoder development and includes identifiers.")
+    TextButton(onClick = export) { Text("Export anonymised samples") }
 }
 
 private fun number(value: Float): String = String.format(Locale.ROOT, "%.1f", value)

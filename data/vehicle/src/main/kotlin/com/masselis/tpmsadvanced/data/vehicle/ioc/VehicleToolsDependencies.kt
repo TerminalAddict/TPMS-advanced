@@ -15,6 +15,7 @@ import dev.zacsweers.metro.SingleIn
 
 @ContributesTo(AppScope::class)
 public interface VehicleToolsDependencies {
+    public val toolsUnits: com.masselis.tpmsadvanced.data.unit.interfaces.UnitPreferences
     public val toolsSensors: SensorDatabase
     public val toolsVehicles: VehicleDatabase
     public val toolsTyres: TyreDatabase

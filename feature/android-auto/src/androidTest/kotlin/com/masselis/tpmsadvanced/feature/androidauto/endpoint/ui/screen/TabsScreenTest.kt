@@ -1,7 +1,7 @@
 package com.masselis.tpmsadvanced.feature.androidauto.endpoint.ui.screen
 
 import androidx.car.app.Screen
-import androidx.car.app.model.GridTemplate
+import androidx.car.app.model.ListTemplate
 import androidx.car.app.model.TabTemplate
 import androidx.car.app.testing.TestCarContext
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
@@ -64,22 +64,22 @@ internal class TabsScreenTest {
 
     /**
      * Same idea as awaitTabTemplate, but for the single-vehicle path, where onGetTemplate()
-     * returns the vehicle's GridTemplate directly instead of a TabTemplate.
+     * returns the vehicle's ListTemplate directly instead of a TabTemplate.
      */
-    private fun awaitGridTemplate(screen: Screen, timeoutMs: Long = 5_000): GridTemplate {
+    private fun awaitListTemplate(screen: Screen, timeoutMs: Long = 5_000): ListTemplate {
         val deadline = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < deadline) {
-            runOnMain { screen.onGetTemplate() }.let { if (it is GridTemplate) return it }
+            runOnMain { screen.onGetTemplate() }.let { if (it is ListTemplate) return it }
             Thread.sleep(20)
         }
-        error("Timed out waiting for a GridTemplate")
+        error("Timed out waiting for a ListTemplate")
     }
 
     @Test
     fun singleVehicleHidesTheTabsAndRendersItsGridDirectly() {
-        val gridTemplate = awaitGridTemplate(buildScreen())
+        val listTemplate = awaitListTemplate(buildScreen())
 
-        assertEquals(4, gridTemplate.singleList!!.items.size)
+        assertEquals(5, listTemplate.singleList!!.items.size)
     }
 
     @Test
@@ -102,7 +102,7 @@ internal class TabsScreenTest {
         // "Other car" was inserted as current, so its tab is the active one and the grid content
         // reflects it, not "My car".
         assertEquals(otherCar.uuid.toString(), tabTemplate.activeTabContentId)
-        assertIs<GridTemplate>(tabTemplate.tabContents.template)
+        assertIs<ListTemplate>(tabTemplate.tabContents.template)
     }
 
     @Test

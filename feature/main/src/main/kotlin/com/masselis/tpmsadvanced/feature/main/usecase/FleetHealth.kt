@@ -29,13 +29,20 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.flow.flow
 import java.util.UUID
 
-public data class VehicleHealth(val vehicle: Vehicle, val wheels: List<WheelHealth>, val maintenance: String?) {
+public data class VehicleHealth(val vehicle: Vehicle, val wheels: List<WheelHealth>, val maintenance: String?,
+    val imbalances: List<com.masselis.tpmsadvanced.data.vehicle.model.AxleImbalance> = emptyList()) {
     public val warning: Boolean get() = wheels.any { it.state == WheelReadiness.WARNING ||
-        it.state == WheelReadiness.MISSING } || maintenance != null
-    public val ready: Boolean get() = wheels.all { it.state == WheelReadiness.HEALTHY }
+        it.state == WheelReadiness.MISSING } || maintenance != null || imbalances.isNotEmpty()
+    public val ready: Boolean get() = wheels.all { it.state == WheelReadiness.HEALTHY } && imbalances.isEmpty()
 }
+
+/** The combined dashboard must not call the rig healthy while its trailer is stale or warning. */
+public fun groupedVehicleHealth(members: List<VehicleHealth>): VehicleHealth? = members.firstOrNull()?.copy(
+    wheels = members.flatMap { it.wheels }, maintenance = members.firstNotNullOfOrNull { it.maintenance },
+    imbalances = members.flatMap { it.imbalances })
 
 /** Public service state lets dashboard and widget accurately distinguish waiting, stopped and riding. */
 public object RideRuntime {
@@ -96,12 +103,17 @@ public object FleetHealth {
             }, settings.vehicles[vehicle.uuid.toString()]?.reminder?.takeIf {
                 it.isDue(java.time.LocalDate.now())
             }?.label)
-        }.also { values.value = it }
+        }.map { health -> health.copy(imbalances = com.masselis.tpmsadvanced.data.vehicle.model.axleImbalances(
+            health.wheels, settings.insights.imbalanceKpa[health.vehicle.uuid.toString()], now())) }
+            .also { values.value = it }
     }
 
-    public suspend fun observe(): Unit = coroutineScope {
-        while (isActive) { snapshot(); delay(REFRESH_MS) }
+    private val observations by lazy {
+        flow { while (true) { snapshot(); emit(Unit); delay(REFRESH_MS) } }
+            .shareIn(GlobalScope, SharingStarted.WhileSubscribed(), replay = 0)
     }
+    /** Phone, car host and service can observe together without duplicating the polling loop. */
+    public suspend fun observe(): Unit = observations.collect { }
     private fun key(id: UUID, location: Location, sensor: Int) = "$id:$location:$sensor"
 }
 

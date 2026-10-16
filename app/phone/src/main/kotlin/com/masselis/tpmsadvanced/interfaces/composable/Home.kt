@@ -141,7 +141,8 @@ internal fun VehicleHome(
                     composable(route = "${Path.Home(vehicleComponent.vehicle.uuid)}") {
                         Column(modifier) {
                         ReadyToRide(vehicleComponent.vehicle)
-                        CurrentVehicle(
+                        com.masselis.tpmsadvanced.feature.main.interfaces.composable.DrivingDashboard(
+                            vehicle = vehicleComponent.vehicle,
                             snackbarHostState = snackbarHostState,
                             modifier = Modifier.weight(1f).fillMaxWidth()
                         )

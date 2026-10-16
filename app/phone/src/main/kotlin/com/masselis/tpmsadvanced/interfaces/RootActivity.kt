@@ -4,6 +4,10 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.masselis.tpmsadvanced.core.ui.LocalReadability
+import com.masselis.tpmsadvanced.core.ui.Readability
 import androidx.savedstate.serialization.saved
 import com.masselis.tpmsadvanced.core.ui.LocalKeepScreenOnCounter
 import com.masselis.tpmsadvanced.core.ui.ScreenOnCounter
@@ -35,7 +39,10 @@ public class RootActivity : AppCompatActivity() {
         }
 
         setContent {
-            CompositionLocalProvider(LocalKeepScreenOnCounter provides counter) {
+            val tools by (appGraph as VehicleToolsDependencies).rideTools.values.collectAsState()
+            CompositionLocalProvider(LocalKeepScreenOnCounter provides counter,
+                LocalReadability provides Readability(tools.insights.highVisibility, tools.insights.readoutScale,
+                    tools.insights.readingCards)) {
                 TpmsAdvancedTheme {
                     Main(null)
                 }

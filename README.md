@@ -49,7 +49,15 @@ TyrePing builds on the core capabilities of TPMS Advanced:
 - Home-screen widget with pressures, temperatures, monitoring snapshot and advancing age counters
 - Per-wheel tyre maintenance history with date/mileage reminders
 - Optional spoken monitoring diagnostics including Bluetooth and scan-failure reasons
+- Saved towing combinations with a combined vehicle/trailer dashboard and independent alert limits
+- Configurable left/right pressure imbalance warnings for matching tyres on each axle
+- Reception statistics with RSSI, packet counts and optional expected-broadcast estimates
+- User-confirmed cold baselines and per-tyre pressure/temperature changes during a ride
+- Monitoring health check with an explicitly triggered test notification, speech/tone and vibration
+- High-visibility mode, adjustable readout sizes and layouts that adapt to Android font scaling
+- Sensor compatibility toolkit with AD-field inspection, changing byte offsets and anonymised structural exports
 - Cars (including a spare-wheel option), monowheels, vans, utes, motorcycles, single- and double-axle trailers, and three-wheelers
+- Distinct top-down van and ute diagrams, with line art that adapts to light and dark themes
 - Pressure and temperature unit selection
 - QR-code sensor binding with invalid-code and conflicting-assignment checks
 - Tap-wheel sensor management, guided Bluetooth identification, and move/swap/rotate assignments
@@ -67,7 +75,7 @@ TyrePing builds on the core capabilities of TPMS Advanced:
 - Simulated TPMS advertisements through ADB in debug builds
 - Dark mode
 - About page with the app version, TyrePing website, licences and maintainer information
-- Android Auto support
+- Android Auto status and tyre reading lists with warning text, freshness and host content limits
 - Direct vehicle shortcuts
 
 Supported sensor families include formats used by Sysgration, Pecham, Bekubee/HRTPMS, Wicarlink/LYTPMS, and related compatible BLE sensors. Exact compatibility depends on the sensor’s BLE advertisement format.
@@ -76,6 +84,46 @@ For a double axle trailer, choose **Double axle trailer** when adding a vehicle.
 the front: assign front-left/right sensors to the axle nearest the hitch and rear-left/right
 sensors to the other axle. Four-sensor QR kits retain all four positions. Separate front/rear
 pressure limits are available for the two axles.
+
+### Towing and sensor insights (features 31–38)
+
+Use **Towing combinations** above the dashboard, or **Settings → Driving dashboards**, to save a
+car/ute/van and trailer together. Selecting a combination holds the tow vehicle as a manual choice;
+**Individual view** returns to its normal dashboard. Each vehicle retains its own sensors, calibration
+and pressure limits. Tap a combined-dashboard tyre to manage its sensor.
+
+**Tyre insights** configures a per-vehicle left/right difference threshold in kPa (off by default).
+Only matching tyres on the same axle with fresh, close-in-time readings are compared. Audible
+imbalance warnings require active monitoring and pause while Parked. The same screen captures a
+**confirmed cold baseline** after you confirm the tyres have cooled to ambient temperature. Every
+expected wheel needs a bound sensor and a fresh positive reading. Later readings show changes
+from that baseline; comparisons stop after 12 hours, if data goes stale or a different sensor is fitted.
+Pressure and temperature differences are shown in kPa and °C; they are observations, not suggested
+hot-pressure targets.
+
+**Sensor reception quality** shows statistics since this app process started or counters were reset.
+Set a sensor's known broadcast interval to enable missing-broadcast estimates. Statistics use the
+latest 512 packets per sensor and exclude scan interruptions; sleeping sensors and radio conditions
+still affect the estimates. These are advertisements, not a connected Bluetooth link.
+
+**Monitoring health check / self-test** checks permissions, Bluetooth, scanner/service state,
+notifications, audio settings and sensor freshness. Its test alert uses current alert settings and
+respects silence and active tyre alerts. Confirm delivery yourself; software cannot verify that you
+heard an announcement. **High-visibility mode** and **Readout size** are in reading settings.
+Portrait keeps the vehicle diagram when text size or contrast changes. Enable **Use reading cards
+in portrait** for large, scrollable cards instead. Landscape, combined towing, car-with-spare and
+monowheel views use cards automatically.
+
+**Sensor compatibility toolkit** opens the shared unfiltered discovery screen. Expand a device to
+inspect advertisement fields and byte changes. Anonymised exports omit all payload bytes, names,
+addresses, sensor IDs, UUID values and absolute timestamps; raw exports retain the data needed
+to develop a decoder and must be reviewed before sharing. Captures alone do not confirm support
+for an unknown sensor.
+
+Android Auto uses a stable status row and labelled tyre rows, limited to the host's supported row
+count and four vehicle tabs. If rows are omitted, the status directs you to the phone. Freshness
+updates without a new packet. Templates follow the Android [ListTemplate requirements](https://developer.android.com/reference/androidx/car/app/model/ListTemplate.Builder)
+and [template refresh restrictions](https://developer.android.com/training/cars/apps/library/template-restrictions).
 
 ### Ride tools (features 21–29)
 

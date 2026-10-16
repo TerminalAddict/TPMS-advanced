@@ -14,6 +14,11 @@ import androidx.car.app.model.TabTemplate
 import androidx.car.app.model.Template
 import androidx.core.graphics.drawable.IconCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import com.masselis.tpmsadvanced.feature.main.usecase.FleetHealth
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import com.masselis.tpmsadvanced.feature.androidauto.R
 import com.masselis.tpmsadvanced.feature.androidauto.ioc.Bindings.Companion.TabScreenViewModel
@@ -31,6 +36,13 @@ internal class TabsScreen(carContext: CarContext) : Screen(carContext) {
     private val tabsCache = mutableListOf<State.Tabs.Tab>()
 
     init {
+        lifecycleScope.launch {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch { FleetHealth.captureReadings() }
+                launch { FleetHealth.observe() }
+                launch { while (true) { delay(REFRESH_MILLIS); invalidate() } }
+            }
+        }
         viewModel
             .stateFlow
             .debounce(300.milliseconds)
@@ -72,9 +84,12 @@ internal class TabsScreen(carContext: CarContext) : Screen(carContext) {
                         }.also(tabsCache::addAll)
                     } else {
                         // First update the list with the latest values
-                        tabsCache.replaceAll { tabCache ->
-                            state.list.first { newTab -> newTab.vehicle.uuid == tabCache.vehicle.uuid }
+                        val retained = tabsCache.mapNotNull { cached ->
+                            state.list.firstOrNull { it.vehicle.uuid == cached.vehicle.uuid }
                         }
+                        tabsCache.clear()
+                        tabsCache.addAll((retained + state.list.sortedBy { it.vehicle.name })
+                            .distinctBy { it.vehicle.uuid }.take(4))
                         if (tabsCache.none { tabCache -> tabCache.vehicle.uuid == state.displayed.vehicle.uuid })
                         // If the current vehicle is not in the tab, add it first
                             tabsCache[0] = state
@@ -95,7 +110,7 @@ internal class TabsScreen(carContext: CarContext) : Screen(carContext) {
                 .setTabContents(TabContents.Builder(VehicleTemplate(state.displayed)).build())
                 .build()
 
-            else -> error("Unreachable condition")
+            else -> MessageTemplate.Builder("Add a vehicle in TyrePing on your phone").build()
         }
     }
 
@@ -104,7 +119,8 @@ internal class TabsScreen(carContext: CarContext) : Screen(carContext) {
             IconCompat.createWithResource(
                 carContext,
                 when (this) {
-                    Vehicle.Kind.CAR, Vehicle.Kind.CAR_WITH_SPARE, Vehicle.Kind.VAN, Vehicle.Kind.UTE -> R.drawable.car_hatchback
+                    Vehicle.Kind.CAR, Vehicle.Kind.CAR_WITH_SPARE,
+                    Vehicle.Kind.VAN, Vehicle.Kind.UTE -> R.drawable.car_hatchback
                     Vehicle.Kind.SINGLE_AXLE_TRAILER,
                     Vehicle.Kind.DOUBLE_AXLE_TRAILER -> R.drawable.truck_trailer
                     Vehicle.Kind.MOTORCYCLE, Vehicle.Kind.MONOWHEEL -> R.drawable.motorbike
@@ -114,3 +130,5 @@ internal class TabsScreen(carContext: CarContext) : Screen(carContext) {
             )
         ).setTint(CarColor.createCustom(0xFF0E6E14.toInt(), 0xFF81DB74.toInt())).build()
 }
+
+private const val REFRESH_MILLIS = 5_000L

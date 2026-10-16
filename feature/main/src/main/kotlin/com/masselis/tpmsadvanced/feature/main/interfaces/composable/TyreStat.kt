@@ -23,6 +23,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -104,6 +106,7 @@ internal fun ReadingValues(
     modifier: Modifier = Modifier,
     size: ReadingSize = ReadingSize.NORMAL,
 ) {
+    val readability = com.masselis.tpmsadvanced.core.ui.LocalReadability.current
     val (pressure, temperature) = when (val state = state) {
         State.NotDetected -> null to null
         is State.Normal -> Pair(
@@ -141,7 +144,7 @@ internal fun ReadingValues(
         is State.Alerting -> MaterialTheme.colorScheme.error
     }
     var isVisible by remember { mutableStateOf(true) }
-    if (state is State.Alerting) {
+    if (state is State.Alerting && !readability.highVisibility) {
         LaunchedEffect(key1 = isVisible) {
             launch {
                 repeat(Int.MAX_VALUE) {
@@ -169,17 +172,22 @@ internal fun ReadingValues(
         }
     }
     Column(
-        modifier = modifier.alpha(if (isVisible) 1f else 0f)
+        modifier = modifier.alpha(if (isVisible) 1f else 0f).semantics(mergeDescendants = true) {
+            contentDescription = buildString { appendLoc(location, withType = false, capitalized = true) }
+        }
     ) {
+        if (state is State.Alerting) Text("WARNING", color = color, fontWeight = FontWeight.Bold)
+        if (state == State.NotDetected) Text("Sensor not detected", color = color,
+            style = if (size == ReadingSize.NORMAL) MaterialTheme.typography.bodySmall
+                else MaterialTheme.typography.bodyLarge)
         Text(
             pressure?.let { (value, unit) -> value.string(unit) } ?: "-.--",
             fontWeight = FontWeight.SemiBold,
             fontSize = when (size) {
-                ReadingSize.NORMAL -> TextUnit.Unspecified
+                ReadingSize.NORMAL -> 16.sp
                 ReadingSize.CARD -> 32.sp
                 ReadingSize.MAGNIFIED -> 48.sp
-            },
-            maxLines = 1,
+            } * readability.scale,
             color = color,
             modifier = Modifier.align(alignment),
         )
@@ -187,8 +195,7 @@ internal fun ReadingValues(
         Text(
             temperature?.let { (value, unit) -> value.string(unit) } ?: "-.-",
             fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            fontSize = if (size == ReadingSize.MAGNIFIED) 28.sp else 16.sp,
+            fontSize = (if (size == ReadingSize.MAGNIFIED) 28.sp else 16.sp) * readability.scale,
             color = color,
             modifier = Modifier.align(alignment),
         )

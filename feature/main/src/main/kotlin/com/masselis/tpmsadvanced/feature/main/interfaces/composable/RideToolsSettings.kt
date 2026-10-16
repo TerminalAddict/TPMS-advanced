@@ -58,8 +58,20 @@ import java.time.LocalDate
 
 @Composable
 public fun ReadyToRide(vehicle: Vehicle, modifier: Modifier = Modifier) {
+    val tools by (appGraph as VehicleToolsDependencies).rideTools.values.collectAsState()
+    ReadinessCard(vehicle, tools.insights, modifier)
+}
+
+@Composable
+internal fun ReadinessCard(vehicle: Vehicle, insights: com.masselis.tpmsadvanced.data.vehicle.model.DrivingInsights,
+    modifier: Modifier = Modifier) {
     val fleet by FleetHealth.values.collectAsState()
-    val health = fleet.firstOrNull { it.vehicle.uuid == vehicle.uuid }
+    val combination = insights.activeFor(vehicle.uuid,
+        fleet.associate { it.vehicle.uuid.toString() to it.vehicle.kind })
+    val members = listOfNotNull(vehicle.uuid.toString(), combination?.trailer).mapNotNull { id ->
+        fleet.firstOrNull { it.vehicle.uuid.toString() == id }
+    }
+    val health = com.masselis.tpmsadvanced.feature.main.usecase.groupedVehicleHealth(members)
     val status by RideRuntime.status.collectAsState()
     val scanNotice by FleetHealth.scanNotice.collectAsState()
     val parked by RideRuntime.parked.collectAsState()
@@ -77,13 +89,17 @@ public fun ReadyToRide(vehicle: Vehicle, modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.bodySmall)
         }
     }
-    if (open) RideToolsDialog("Ready-to-Ride · ${vehicle.name}", { open = false }) {
+    if (open) RideToolsDialog("Ready-to-Ride · ${combination?.name ?: vehicle.name}", { open = false }) {
         Text(status)
         scanNotice?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         Text("Healthy means a reading within 2 minutes and within your limits. Sleeping sensors are unconfirmed; " +
             "wake them and wait for readings before relying on this check.")
-        health?.wheels?.forEach { wheel -> WheelReadinessCard(wheel, currentTime) }
-        health?.maintenance?.let { Text("Maintenance due: $it") }
+        members.forEach { member ->
+            Text(member.vehicle.name, style = MaterialTheme.typography.titleLarge)
+            member.wheels.forEach { wheel -> WheelReadinessCard(wheel, currentTime) }
+            member.imbalances.forEach { Text("${it.axle} pressure imbalance: ${it.differenceKpa} kPa") }
+            member.maintenance?.let { Text("Maintenance due: $it") }
+        }
         Row {
             Text("Parked · pause missing-sensor warnings", Modifier.weight(1f))
             Switch(parked, {
@@ -106,6 +122,7 @@ private fun readinessTitle(health: VehicleHealth?, scanWarning: Boolean, monitor
 
 @Composable
 internal fun WheelReadinessCard(wheel: WheelHealth, currentTime: Double) {
+    val readability = com.masselis.tpmsadvanced.core.ui.LocalReadability.current
     Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) {
                 Text(wheel.label, style = MaterialTheme.typography.titleMedium)
                 Text(when (wheel.state) {
@@ -116,7 +133,10 @@ internal fun WheelReadinessCard(wheel: WheelHealth, currentTime: Double) {
                     WheelReadiness.MISSING -> "Missing during this ride"
                 })
                 wheel.reading?.let {
-                    Text("${it.pressure.kpa} kPa · ${it.temperature.celsius} °C")
+                    Text("${it.pressure.kpa} kPa",
+                        fontSize = MaterialTheme.typography.headlineSmall.fontSize * readability.scale)
+                    Text("${it.temperature.celsius} °C",
+                        fontSize = MaterialTheme.typography.titleMedium.fontSize * readability.scale)
                     Text("Last seen ${((currentTime - it.timestamp).coerceAtLeast(0.0)).toInt()}s ago")
                     Text("Battery: ${it.sensorBattery?.label() ?: "not reported"}")
                 }
@@ -152,7 +172,7 @@ public fun RideToolsSettings(vehicle: Vehicle) {
 }
 
 @Composable
-internal fun RideToolsDialog(title: String, close: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+public fun RideToolsDialog(title: String, close: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     Dialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize()) {
             Column(Modifier.safeDrawingPadding().imePadding().padding(16.dp)) {

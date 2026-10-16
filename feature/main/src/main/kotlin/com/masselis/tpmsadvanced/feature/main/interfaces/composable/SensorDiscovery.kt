@@ -64,6 +64,7 @@ internal fun SensorDiscoveryDialog(vehicle: Vehicle, dismiss: () -> Unit) {
     var expanded by remember { mutableStateOf<String?>(null) }
     var assigning by remember { mutableStateOf<BleAdvertisement?>(null) }
     var exportPackets by remember { mutableStateOf(emptyList<BleAdvertisement>()) }
+    var anonymised by remember { mutableStateOf(false) }
     val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
     val scanStatus by scanner.scanStatus.collectAsState()
     val permissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
@@ -74,26 +75,31 @@ internal fun SensorDiscoveryDialog(vehicle: Vehicle, dismiss: () -> Unit) {
         ActivityResultContracts.CreateDocument("application/x-ndjson")
     ) { uri ->
         val packets = exportPackets
+        val anonymous = anonymised
         exportPackets = emptyList()
         if (uri != null) scope.launch {
             try {
                 withContext(Dispatchers.IO) {
                     checkNotNull(context.contentResolver.openOutputStream(uri, "wt")).bufferedWriter().use { writer ->
-                        packets.forEach { writer.appendLine(it.jsonLine()) }
+                        if (anonymous) writer.write(
+                            com.masselis.tpmsadvanced.data.vehicle.model.anonymisedCompatibilityReport(packets))
+                        else packets.forEach { writer.appendLine(it.jsonLine()) }
                     }
                 }
-                message = "Exported ${packets.size} packets. " +
-                    "Attach the JSONL file for protocol investigation."
+                message = if (anonymous) "Exported anonymised structure and timing. Payload bytes are omitted."
+                    else "Exported ${packets.size} raw packets, including identifiers. Review before sharing."
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { message = "Could not save the capture. Choose another destination." }
         }
     }
-    fun exportCapture(address: String?) {
+    fun exportCapture(address: String?, anonymous: Boolean = false) {
         // Freeze the capture before the document picker pauses this screen.
         exportPackets = session.capture(address)
+        anonymised = anonymous
         requested = false
         if (exportPackets.isEmpty()) message = "No retained packets for this device. Scan again before exporting."
-        else export.launch("TyrePing-discovery-${address?.replace(":", "") ?: "all"}.jsonl")
+        else export.launch(if (anonymous) "TyrePing-anonymised-structure.jsonl"
+            else "TyrePing-discovery-${address?.replace(":", "") ?: "all"}.jsonl")
     }
     LaunchedEffect(lifecycle, session) {
         if (!lifecycle.isAtLeast(Lifecycle.State.RESUMED)) { requested = false; return@LaunchedEffect }
@@ -135,7 +141,8 @@ internal fun SensorDiscoveryDialog(vehicle: Vehicle, dismiss: () -> Unit) {
                     onMark = { session.markInstallation(); devices = session.devices() },
                     onClear = { session = BleDiscoverySession(); devices = emptyList(); expanded = null; message = "" },
                     onExpand = { expanded = if (expanded == it) null else it },
-                    onAssign = { assigning = it }, onExport = ::exportCapture, onClose = dismiss)
+                    onAssign = { assigning = it }, onExport = { exportCapture(it) }, onClose = dismiss,
+                    onAnonymisedExport = { exportCapture(it, true) }, packetsFor = { session.capture(it) })
             }
         }
     }
